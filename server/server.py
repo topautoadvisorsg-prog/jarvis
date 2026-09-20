@@ -230,16 +230,34 @@ class HermesAPI:
         return {"status_code": r.status_code, "body": r.text[:300]}
 
     def chat_stream_events(self, session_id: str, input_text: str, timeout: float) -> Iterator[tuple[str, str]]:
-        """Yield ("run"|"text"|"tool"|"approval"|"final", value) from a session turn."""
-        resp = requests.post(
-            f"{self.base}/api/sessions/{session_id}/chat/stream",
+        """Yield run/text/tool/approval/final events through Hermes' controllable run API.
+
+        Hermes v0.21 emits interactive approval events only on ``/v1/runs``.
+        Supplying the persistent session id retains conversation history while
+        gaining working approvals, steering and reliable cancellation.
+        """
+        start = requests.post(
+            f"{self.base}/v1/runs",
+            headers=self.headers(),
+            json={"input": input_text, "session_id": session_id},
+            timeout=15,
+        )
+        if start.status_code >= 400:
+            raise RuntimeError(f"Hermes run start HTTP {start.status_code}: {start.text[:300]}")
+        run_id = start.json().get("run_id") or ""
+        if not run_id:
+            raise RuntimeError("Hermes run start returned no run_id")
+        yield ("run", run_id)
+        resp = requests.get(
+            f"{self.base}/v1/runs/{run_id}/events",
             headers={**self.headers(), "Accept": "text/event-stream"},
-            json={"input": input_text}, stream=True, timeout=(10, timeout),
+            stream=True,
+            timeout=(10, timeout),
         )
         if resp.status_code >= 400:
             resp.close()
-            raise RuntimeError(f"Hermes session chat HTTP {resp.status_code}: {resp.text[:300]}")
-        resp.encoding = "utf-8"  # SSE has no charset header; requests would assume latin-1 (mojibake)
+            raise RuntimeError(f"Hermes run events HTTP {resp.status_code}: {resp.text[:300]}")
+        resp.encoding = "utf-8"
         try:
             yield from self._parse_sse(resp)
         finally:
@@ -262,18 +280,16 @@ class HermesAPI:
             except json.JSONDecodeError:
                 continue
             ev = event_name or data.get("event", "")
-            if ev == "run.started":
-                yield ("run", data.get("run_id") or "")
-            elif ev == "assistant.delta":
+            if ev in ("assistant.delta", "message.delta"):
                 d = data.get("delta") or ""
                 if d:
                     yield ("text", d)
             elif ev == "tool.started":
-                name = data.get("tool_name") or "tool"
+                name = data.get("tool_name") or data.get("name") or "tool"
                 if name.startswith("_"):
                     continue  # internal pseudo-tools like _thinking
                 yield ("tool", json.dumps({"name": name, "preview": (data.get("preview") or "")[:200]}))
-            elif "approval" in ev:
+            elif ev in ("approval.request", "approval_required"):
                 yield ("approval", json.dumps(data)[:2000])
             elif ev == "assistant.completed":
                 yield ("final", json.dumps({
@@ -290,6 +306,12 @@ class HermesAPI:
                         llm_out=int(usage.get("output_tokens") or 0),
                         turns=1,
                     )
+                yield ("final", json.dumps({
+                    "content": data.get("output") or "",
+                    "interrupted": False,
+                }))
+            elif ev in ("run.cancelled", "run.interrupted"):
+                yield ("final", json.dumps({"content": "", "interrupted": True}))
             elif ev == "done":
                 pass  # stream closes after this
 
@@ -752,6 +774,7 @@ class VoicePipelineServer:
                     continue
                 # kind == "text"
                 full_response.append(value)
+                await ws.send_json({"type": "response_delta", "delta": value})
                 pending += value
                 sentences, pending = self._extract_complete_sentences(pending)
                 for sentence in sentences:
@@ -1869,9 +1892,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                         continue
                     decision = event.get("decision", "deny")
                     body = {
-                        "decision": decision,
-                        "approved": decision == "allow",
-                        "approval_id": event.get("approval_id"),
+                        "choice": "once" if decision == "allow" else "deny",
+                        "request_id": event.get("approval_id"),
                     }
                     res = await asyncio.to_thread(HERMES.post_approval, run_id, body)
                     await ws.send_json({"type": "status", "message": f"Approval sent ({res['status_code']})."})

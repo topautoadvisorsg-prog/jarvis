@@ -475,13 +475,18 @@ function addActivity(text,toolName,preview){
 }
 
 /* live partial transcript bubble */
-let liveEl=null, currentRun=null;
+let liveEl=null, assistantLiveEl=null, currentRun=null;
 function showLive(text){
   if(!text)return;
   if(!liveEl){liveEl=addMsg("you live","");}
   liveEl.textContent=text; feed.scrollTop=feed.scrollHeight;
 }
 function clearLive(){ if(liveEl){liveEl.remove(); liveEl=null;} }
+function streamAssistant(delta){
+  if(!delta)return;
+  if(!assistantLiveEl)assistantLiveEl=addMsg("jarvis live","");
+  assistantLiveEl.textContent+=delta; feed.scrollTop=feed.scrollHeight;
+}
 function showStop(on){ $("stopBtn").style.display=on?"block":"none"; }
 function stopRun(){
   stopPlayback();
@@ -493,7 +498,7 @@ function stopRun(){
 function showApproval(e){
   const data=e.data||{};
   const esc=s=>String(s||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
-  const id=data.approval_id||data.id||"";
+  const id=data.request_id||data.approval_id||data.id||"";
   const desc=data.preview||data.command||data.description||JSON.stringify(data).slice(0,300);
   const card=document.createElement("div"); card.className="appr";
   card.innerHTML=`<h3>⚠ APPROVAL REQUIRED</h3><pre>${esc(desc)}</pre>
@@ -528,6 +533,7 @@ function connect(){
     }
     else if(e.type==="partial_transcript"){ showLive(e.text); }
     else if(e.type==="transcript"){ clearLive(); if(e.text)addMsg("you",e.text); }
+    else if(e.type==="response_delta"){ streamAssistant(e.delta); }
     else if(e.type==="run_started"){ currentRun=e.run_id; showStop(true); }
     else if(e.type==="approval_request"){ earcon("alert"); showApproval(e); }
     else if(e.type==="agent_status"){
@@ -544,7 +550,8 @@ function connect(){
       if(tm.end_of_speech_to_first_audio_seconds!=null)$("mFirst").textContent=tm.end_of_speech_to_first_audio_seconds+"s";
       if(tm.total_turn_seconds!=null)$("mTotal").textContent=tm.total_turn_seconds+"s";
       $("mBrain").textContent=tm.llm_provider||"—";
-      if(tm.response_text)addMsg("jarvis",tm.response_text);
+      if(assistantLiveEl){ assistantLiveEl.classList.remove("live"); assistantLiveEl=null; }
+      else if(tm.response_text)addMsg("jarvis",tm.response_text);
       setTimeout(()=>{if(state!=="listening")setState("standby","STANDBY")},400);
     }
   };
