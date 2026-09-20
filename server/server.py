@@ -1092,7 +1092,7 @@ async def hermes_proxy(path: str, request: Request) -> Response:
         resp = await asyncio.to_thread(do_request)
     except requests.RequestException as exc:
         return JSONResponse(
-            {"error": "Hermes dashboard is unavailable", "detail": str(exc)[:300]},
+            {"error": "Hermes API is unavailable", "detail": str(exc)[:300]},
             status_code=502,
         )
     return Response(content=resp.content, status_code=resp.status_code,
@@ -1675,7 +1675,13 @@ async def dash_http_proxy(path: str, request: Request) -> Response:
             data=body if body else None, timeout=60, allow_redirects=False,
         )
 
-    resp = await asyncio.to_thread(do_request)
+    try:
+        resp = await asyncio.to_thread(do_request)
+    except requests.RequestException as exc:
+        return JSONResponse(
+            {"error": "Hermes dashboard is unavailable", "detail": str(exc)[:300]},
+            status_code=502,
+        )
     out_headers = {k: v for k, v in resp.headers.items() if k.lower() not in _STRIP_HEADERS}
     out_headers["content-security-policy"] = _frame_ancestors_csp()  # scoped, not stripped (F4)
     return Response(content=resp.content, status_code=resp.status_code, headers=out_headers)
