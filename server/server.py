@@ -793,6 +793,9 @@ class VoicePipelineServer:
             if tail:
                 conn.spoken_sentences.append(tail)
                 async with tts_lock:
+                    if not spoken:
+                        await ws.send_json({"type": "agent_status", "state": "speaking"})
+                        spoken = True
                     await self._send_tts_sentence(ws, tail, timing)
         finally:
             if ack_task and not ack_task.done():
