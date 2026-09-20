@@ -1774,6 +1774,40 @@ async def _run_turn(ws: WebSocket, pipeline: VoicePipelineServer, conn: ConnStat
         conn.current_run_id = None
 
 
+async def _run_text_turn(
+    ws: WebSocket, pipeline: VoicePipelineServer, conn: ConnState, text: str,
+) -> None:
+    """Run typed HUD input through the same streamed, cancellable voice path."""
+    now = time.perf_counter()
+    timing = TurnTiming(turn_id=pipeline.next_turn_id())
+    timing.audio_start_monotonic = now
+    timing.end_of_speech_monotonic = now
+    timing.stt_start_monotonic = now
+    timing.stt_done_monotonic = now
+    timing.stt_model = "typed-input"
+    timing.transcript = text
+    conn.timing = timing
+    conn.spoken_sentences = []
+    try:
+        await pipeline.stream_response_audio(ws, text, timing, conn)
+        timing.total_done_monotonic = time.perf_counter()
+        await ws.send_json({"type": "done", "turn_id": timing.turn_id, "timing": timing.summary()})
+    except asyncio.CancelledError:
+        timing.errors.append("typed turn cancelled (barge-in or stop)")
+        raise
+    except Exception as exc:
+        timing.errors.append(f"{type(exc).__name__}: {exc}")
+        try:
+            await ws.send_json({"type": "error", "message": str(exc)})
+        except Exception:
+            pass
+    finally:
+        timing.total_done_monotonic = timing.total_done_monotonic or time.perf_counter()
+        pipeline.log_turn(timing)
+        conn.timing = None
+        conn.current_run_id = None
+
+
 async def _cancel_active_turn(ws: WebSocket, pipeline: VoicePipelineServer, conn: ConnState,
                               stop_remote: bool = True) -> None:
     run_id = conn.current_run_id  # capture BEFORE cancel: turn cleanup clears it
@@ -1887,6 +1921,18 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 elif etype == "stop_run":
                     await _cancel_active_turn(ws, pipeline, conn)
                     await ws.send_json({"type": "agent_status", "state": "stopped"})
+                elif etype == "text_input":
+                    text = str(event.get("text") or "").strip()
+                    if not text:
+                        await ws.send_json({"type": "error", "message": "Empty typed input."})
+                        continue
+                    if pipeline is None:
+                        pipeline = await asyncio.to_thread(get_pipeline)
+                    await _cancel_active_turn(ws, pipeline, conn)
+                    if event.get("conversation"):
+                        conn.conversation = str(event["conversation"])
+                    conn.recording = False
+                    conn.turn_task = asyncio.create_task(_run_text_turn(ws, pipeline, conn, text))
                 elif etype == "approval_decision":
                     run_id = event.get("run_id") or conn.current_run_id
                     if not run_id:

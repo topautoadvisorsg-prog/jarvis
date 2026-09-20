@@ -726,6 +726,11 @@ addEventListener("keydown",e=>{
 async function sendChat(){
   const inp=$("chatInput"); const text=inp.value.trim(); if(!text)return;
   inp.value=""; addMsg("you",text); setState("thinking","PROCESSING");
+  if(wsReady){
+    audioArrived=false;
+    ws.send(JSON.stringify({type:"text_input",text,conversation:CONV}));
+    return;
+  }
   try{
     const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({input:text,conversation:CONV})});
