@@ -1527,6 +1527,7 @@ async def config_summary() -> JSONResponse:
     port.
     """
     llm_cfg = CFG.get("llm") or {}
+    hermes_cfg = CFG.get("hermes") or {}
     stt_cfg = CFG.get("stt") or {}
     voice_cfg = CFG.get("voice") or {}
     dash_cfg = ((CFG.get("server") or {}).get("dashboard_proxy")) or {}
@@ -1539,7 +1540,7 @@ async def config_summary() -> JSONResponse:
         "stt_model": stt_cfg.get("model", "?"),
         "stt_language": stt_cfg.get("language") or "auto",
         "tts_model": voice_cfg.get("model", "?"),
-        "fallback_model": llm_cfg.get("model", "?"),
+        "fallback_model": hermes_cfg.get("fallback_provider") or "none",
         # None unless the deployment sets server.dashboard_proxy.external_url;
         # the HUD falls back to its existing same-host:port default when null.
         "dashboard_proxy_url": dash_cfg.get("external_url"),
@@ -1552,13 +1553,15 @@ _WORKER_CACHE: dict = {"ts": 0.0, "data": [], "refreshing": False}
 
 @app.get("/api/machines")
 async def machines() -> JSONResponse:
-    """Local (Mac) stats + configured remote workers.
+    """Local host stats + configured remote workers.
 
     Worker polls can take seconds when a worker is offline, so they run in a
     background refresh; the endpoint always answers instantly from cache.
     """
+    import socket
+
     result: list[dict] = []
-    mac: dict = {"name": "MAC MINI · HERMES", "online": True}
+    mac: dict = {"name": f"{socket.gethostname().upper()} · HERMES", "online": True}
     if psutil:
         mac.update({
             "cpu": psutil.cpu_percent(interval=0.1),
@@ -1579,7 +1582,6 @@ async def machines() -> JSONResponse:
                     return info
             except Exception:
                 pass
-        import socket
         try:
             with socket.create_connection((w.get("host"), int(w.get("ping_port", 445))), timeout=1.5):
                 info["online"] = True
