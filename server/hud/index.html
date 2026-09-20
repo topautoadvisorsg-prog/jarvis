@@ -321,7 +321,7 @@ footer{
       <div class="kv"><span>Tokens today</span><b id="uTok">—</b></div>
       <div class="kv" id="uCostRow" style="display:none"><span>Est. cost today</span><b id="uCost">—</b></div>
       <div class="kv"><span>Turns today</span><b id="uTurns">—</b></div>
-      <div class="kv"><span>11Labs quota</span><b id="uTts">—</b></div>
+      <div class="kv"><span>Voice usage</span><b id="uTts">—</b></div>
       <div class="bar"><i id="ttsBar"></i></div>
     </div>
     <div class="panel"><h2><span>MACHINES</span><span class="num">07</span></h2>
@@ -333,7 +333,7 @@ footer{
     </div>
     <div class="panel"><h2><span>DIAGNOSTICS</span><span class="num">09</span></h2>
       <div class="kv"><span><span class="dot" id="apiDot"></span>Hermes API</span><b id="apiState">—</b></div>
-      <div class="kv"><span><span class="dot" id="elevenDot"></span>11Labs API</span><b id="elevenState">—</b></div>
+      <div class="kv"><span><span class="dot" id="elevenDot"></span>Voice API</span><b id="elevenState">—</b></div>
       <div class="kv"><span>CPU</span><b id="hCpu">—</b></div>
       <div class="kv"><span>Memory</span><b id="hMem">—</b></div>
       <div class="kv"><span>Refreshed</span><b id="hWhen">—</b></div>
@@ -943,7 +943,7 @@ async function fillLiveStatus(el){
     rows.push({label:"Tokens today", value:`${fmtK(t.llm_in||0)} in / ${fmtK(t.llm_out||0)} out`});
     rows.push({label:"Turns today", value:t.turns||0});
     const e=u.elevenlabs;
-    if(e&&e.limit) rows.push({label:"11Labs quota", value:`${fmtK(e.used)} / ${fmtK(e.limit)}`});
+    if(e&&e.limit) rows.push({label:"Voice quota", value:`${fmtK(e.used)} / ${fmtK(e.limit)}`});
     el.innerHTML=rows.map(r=>
       `<div class="kv"><span>${escHtml(r.label)}</span><b>${escHtml(String(r.value))}</b></div>`).join("");
   }catch{ el.textContent="unavailable"; }
