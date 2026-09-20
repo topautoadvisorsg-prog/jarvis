@@ -87,7 +87,13 @@ function interrupt() {
   for (const timer of scheduledMouth) clearTimeout(timer);
   scheduledMouth.clear();
   clearTimeout(mouthTimer);
-  resetMouth(true);
+  mouthLevel = 0;
+  if (head) {
+    for (const key of ["jawOpen", "mouthOpen", "mouthPucker", "mouthFunnel"]) {
+      try { head.setFixedValue(key, 0, 18); } catch {}
+    }
+    mouthTimer = setTimeout(() => resetMouth(true), 240);
+  }
   try { head?.streamInterrupt?.(); } catch {}
 }
 
