@@ -8,6 +8,7 @@ let head = null;
 let ready = false;
 let mouthTimer = null;
 let mouthLevel = 0;
+const scheduledMouth = new Set();
 
 function showStatus(text, kind = "") {
   status.textContent = text;
@@ -83,9 +84,22 @@ function setState(next) {
 }
 
 function interrupt() {
+  for (const timer of scheduledMouth) clearTimeout(timer);
+  scheduledMouth.clear();
   clearTimeout(mouthTimer);
   resetMouth(true);
   try { head?.streamInterrupt?.(); } catch {}
+}
+
+function schedulePCM(buffer, delayMs = 0, durationMs = 120) {
+  if (!ready) return;
+  const startTimer = setTimeout(() => {
+    scheduledMouth.delete(startTimer);
+    ingestPCM(buffer);
+    clearTimeout(mouthTimer);
+    mouthTimer = setTimeout(() => resetMouth(), Math.max(70, durationMs + 25));
+  }, Math.max(0, delayMs));
+  scheduledMouth.add(startTimer);
 }
 
 function setVisualization(active) {
@@ -94,7 +108,7 @@ function setVisualization(active) {
 
 window.JarvisAvatar = {
   get ready() { return ready; },
-  ingestPCM,
+  schedulePCM,
   interrupt,
   setState,
   setVisualization,

@@ -560,7 +560,7 @@ function connect(){
       setState("speaking","INCOMING");
     }
     else if(e.type==="speak_end"){
-      setTimeout(()=>{ if(state!=="listening"&&state!=="thinking")setState("standby","STANDBY"); },400);
+      settleAfterAudio();
     }
     else if(e.type==="partial_transcript"){ showLive(e.text); }
     else if(e.type==="transcript"){ clearLive(); if(e.text)addMsg("you",e.text); }
@@ -583,7 +583,7 @@ function connect(){
       $("mBrain").textContent=tm.llm_provider||"—";
       if(assistantLiveEl){ assistantLiveEl.classList.remove("live"); assistantLiveEl=null; }
       else if(tm.response_text)addMsg("jarvis",tm.response_text);
-      setTimeout(()=>{if(state!=="listening")setState("standby","STANDBY")},400);
+      settleAfterAudio();
     }
   };
 }
@@ -598,7 +598,6 @@ function ensureCtx(){
   if(audioCtx.state==="suspended")audioCtx.resume();
 }
 function playChunk(buf){
-  window.JarvisAvatar?.ingestPCM(buf);
   ensureCtx();
   let bytes=new Uint8Array(buf);
   if(leftoverByte!==null){const m=new Uint8Array(bytes.length+1);m[0]=leftoverByte;m.set(bytes,1);bytes=m;leftoverByte=null}
@@ -610,9 +609,14 @@ function playChunk(buf){
   const ab=audioCtx.createBuffer(1,f32.length,16000); ab.copyToChannel(f32,0);
   const src=audioCtx.createBufferSource(); src.buffer=ab; src.connect(audioCtx.destination);
   const t=Math.max(audioCtx.currentTime+0.06,playhead);
+  window.JarvisAvatar?.schedulePCM(buf,Math.max(0,(t-audioCtx.currentTime)*1000),ab.duration*1000);
   src.start(t); playhead=t+ab.duration;
-  activeSources.push(src); src.onended=()=>{activeSources=activeSources.filter(x=>x!==src)};
+  activeSources.push(src); src.onended=()=>{activeSources=activeSources.filter(x=>x!==src);settleAfterAudio()};
   audioArrived=true;
+}
+function settleAfterAudio(){
+  if(activeSources.length||capturing||state==="thinking"||state==="tool")return;
+  if(state==="speaking")setTimeout(()=>{if(!activeSources.length&&state==="speaking")setState("standby","STANDBY")},180);
 }
 function stopPlayback(){ activeSources.forEach(s=>{try{s.stop()}catch{}}); activeSources=[]; playhead=0; window.JarvisAvatar?.interrupt(); }
 
