@@ -54,11 +54,32 @@ header .sub{font-size:12px; letter-spacing:3px; color:var(--txt-dim)}
 .dot.off{background:var(--red); box-shadow:0 0 6px var(--red)}
 #center{display:flex; flex-direction:column; align-items:center; justify-content:flex-start; position:relative; overflow:hidden}
 #reactorWrap{position:relative; width:min(46vh,440px); height:min(46vh,440px); cursor:pointer; flex-shrink:0}
-#reactor{width:100%; height:100%}
+#reactor{position:absolute; inset:0; width:100%; height:100%; z-index:2; pointer-events:none}
+#avatarStage{position:absolute; inset:10%; z-index:1; opacity:0; transform:scale(.92); overflow:hidden;
+  border-radius:50%; transition:opacity .45s ease,transform .45s ease,filter .28s ease;
+  filter:saturate(.55) hue-rotate(145deg) contrast(1.15) brightness(.9) drop-shadow(0 0 12px #00e5ff88)}
+#avatarStage canvas{width:100%!important;height:100%!important;display:block}
+#avatarStage::after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;
+  background:repeating-linear-gradient(0deg,transparent 0 4px,#00e5ff12 4px 5px),
+    radial-gradient(circle at 50% 44%,transparent 0 42%,#00e5ff14 65%,transparent 76%)}
+#reactorWrap.avatar-ready #avatarStage{opacity:.96;transform:scale(1)}
+#reactorWrap[data-avatar-state="listening"] #avatarStage{filter:saturate(.7) hue-rotate(120deg) contrast(1.2) brightness(1.15) drop-shadow(0 0 20px #19f0d8cc)}
+#reactorWrap[data-avatar-state="thinking"] #avatarStage,
+#reactorWrap[data-avatar-state="tool"] #avatarStage{filter:saturate(.75) hue-rotate(185deg) contrast(1.25) brightness(1.08) drop-shadow(0 0 20px #ffb300aa)}
+#reactorWrap[data-avatar-state="speaking"] #avatarStage{animation:avatarSpeakGlow .8s ease-in-out infinite alternate}
+@keyframes avatarSpeakGlow{from{filter:saturate(.6) hue-rotate(145deg) contrast(1.15) brightness(.95) drop-shadow(0 0 10px #00e5ff88)}to{filter:saturate(.8) hue-rotate(145deg) contrast(1.25) brightness(1.2) drop-shadow(0 0 25px #00e5ffdd)}}
+#reactorWrap.avatar-visualizing #avatarStage{opacity:0;transform:scale(.72) rotateY(18deg);filter:blur(9px) brightness(1.8)}
+#avatarStatus{position:absolute;left:50%;bottom:5%;z-index:4;transform:translateX(-50%);white-space:nowrap;
+  font-family:'Orbitron';font-size:7px;letter-spacing:1.6px;color:var(--txt-dim);pointer-events:none}
+#avatarStatus[data-kind="ready"]{color:var(--cyan-dim)}
+#avatarStatus[data-kind="error"]{color:var(--red)}
 #coreState{
-  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  position:absolute; inset:0; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;
   pointer-events:none; font-family:'Orbitron';
 }
+#reactorWrap.avatar-ready #coreState{justify-content:flex-end;padding-bottom:11%}
+#reactorWrap.avatar-ready #coreState .st{font-size:10px;letter-spacing:4px;background:#03101bcc;padding:3px 8px}
+#reactorWrap.avatar-ready #coreState .hint{display:none}
 #coreState .st{font-size:15px; letter-spacing:6px; color:var(--cyan); text-shadow:0 0 14px #00e5ffaa}
 #coreState .hint{font-size:9px; letter-spacing:2px; color:var(--txt-dim); margin-top:6px}
 #feed{
@@ -299,8 +320,10 @@ footer{
   <div id="center">
     <div id="approvals"></div>
     <div id="reactorWrap" title="Click to talk">
+      <div id="avatarStage" aria-label="JARVIS prototype talking avatar"></div>
       <canvas id="reactor"></canvas>
       <div id="coreState"><div class="st" id="stateLabel">STANDBY</div><div class="hint" id="stateHint">CLICK RING OR SPACE TO TALK</div></div>
+      <div id="avatarStatus">DEMO AVATAR LOADING</div>
     </div>
     <div id="feed"></div>
     <div id="chatRow">
@@ -371,6 +394,13 @@ footer{
   </footer>
 </div>
 
+<script type="importmap">
+{"imports":{
+  "three":"./vendor/three/build/three.module.js",
+  "three/addons/":"./vendor/three/examples/jsm/",
+  "talkinghead":"./vendor/talkinghead/talkinghead.mjs"
+}}</script>
+<script type="module" src="./avatar-controller.mjs"></script>
 <script>
 "use strict";
 /* ============================== state ============================== */
@@ -454,6 +484,7 @@ requestAnimationFrame(frame);
 
 function setState(st,label,hint){
   state=st;
+  window.JarvisAvatar?.setState(st);
   $("stateLabel").textContent=label;
   if(hint!==undefined)$("stateHint").textContent=hint;
 }
@@ -567,6 +598,7 @@ function ensureCtx(){
   if(audioCtx.state==="suspended")audioCtx.resume();
 }
 function playChunk(buf){
+  window.JarvisAvatar?.ingestPCM(buf);
   ensureCtx();
   let bytes=new Uint8Array(buf);
   if(leftoverByte!==null){const m=new Uint8Array(bytes.length+1);m[0]=leftoverByte;m.set(bytes,1);bytes=m;leftoverByte=null}
@@ -582,7 +614,7 @@ function playChunk(buf){
   activeSources.push(src); src.onended=()=>{activeSources=activeSources.filter(x=>x!==src)};
   audioArrived=true;
 }
-function stopPlayback(){ activeSources.forEach(s=>{try{s.stop()}catch{}}); activeSources=[]; playhead=0; }
+function stopPlayback(){ activeSources.forEach(s=>{try{s.stop()}catch{}}); activeSources=[]; playhead=0; window.JarvisAvatar?.interrupt(); }
 
 /* ============================== audio in =========================== */
 const workletCode=`
@@ -666,10 +698,12 @@ function openView(name,path){
   $("viewerTitle").textContent=name;
   $("viewerIframe").src=DASH_PROXY+path;
   $("viewer").classList.add("open");
+  window.JarvisAvatar?.setVisualization(true);
 }
 function closeView(){
   $("viewer").classList.remove("open");
   $("viewerIframe").src="about:blank";
+  window.JarvisAvatar?.setVisualization(Boolean(document.querySelector(".holo:not(.dismiss)")));
 }
 $("viewerClose").onclick=closeView;
 $("viewerPop").onclick=()=>{window.open($("viewerIframe").src,"_blank");closeView()};
@@ -949,6 +983,10 @@ async function fillLiveStatus(el){
   }catch{ el.textContent="unavailable"; }
 }
 let lastSummon={key:"",t:0};
+function syncAvatarVisualization(){
+  const active=$("viewer").classList.contains("open")||Boolean(document.querySelector(".holo:not(.dismiss)"));
+  window.JarvisAvatar?.setVisualization(active);
+}
 function summonPanel(opts){
   const o=opts||{};
   const kind=["chart","glance","status"].includes(o.kind)?o.kind:"";
@@ -987,6 +1025,7 @@ function summonPanel(opts){
     <div class="holoChroma c2"></div>
     <div class="holoBoot"></div>`;
   $("holoStage").appendChild(p);
+  syncAvatarVisualization();
   if(kind==="status" && o.live) fillLiveStatus(p.querySelector('[data-live]'));
   holoWhoosh(true);
   // camera dolly: the whole HUD recedes briefly while the panel arrives
@@ -995,7 +1034,7 @@ function summonPanel(opts){
   holoBootTicker(p.querySelector(".holoBoot"));
   p.addEventListener("animationend",e=>{
     if(e.animationName==="holoApproach") p.classList.add("idle");
-    if(e.animationName==="holoDismiss") p.remove();
+    if(e.animationName==="holoDismiss"){p.remove();syncAvatarVisualization()}
   });
   p.querySelector(".hx").onclick=()=>dismissPanel(p);
   addActivity("hologram: "+title.toLowerCase());
@@ -1006,7 +1045,7 @@ function dismissPanel(p){
   p.classList.remove("idle");
   holoWhoosh(false);
   p.classList.add("dismiss");
-  setTimeout(()=>p.remove(),700);  // safety net if animationend is missed
+  setTimeout(()=>{p.remove();syncAvatarVisualization()},700);  // safety net if animationend is missed
 }
 function dismissAllPanels(){document.querySelectorAll(".holo").forEach(dismissPanel)}
 window.summonPanel=summonPanel; window.dismissAllPanels=dismissAllPanels;
