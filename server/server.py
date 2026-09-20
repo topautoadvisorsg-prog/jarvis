@@ -22,12 +22,14 @@ and approval events. Falls back to direct Anthropic ("basic mode") if unreachabl
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
 import re
 import threading
 import time
 import uuid
+import wave
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -41,7 +43,6 @@ from anthropic import Anthropic
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from faster_whisper import WhisperModel
 
 try:
     import psutil
@@ -305,21 +306,23 @@ class VoicePipelineServer:
 
         stt_cfg = cfg["stt"]
 
-        print(
-            "Loading direct faster-whisper model "
-            f"{stt_cfg['model']} on {stt_cfg.get('device', 'cpu')} ...",
-            flush=True,
-        )
+        self.whisper_model = None
+        if stt_cfg.get("provider", "faster-whisper") == "faster-whisper":
+            from faster_whisper import WhisperModel
 
-        self.whisper_model = WhisperModel(
-            stt_cfg["model"],
-            device=stt_cfg.get("device", "cpu"),
-            compute_type=stt_cfg.get("compute_type", "int8"),
-            cpu_threads=int(stt_cfg.get("cpu_threads", 4)),
-            num_workers=1,
-        )
-
-        print("Direct faster-whisper model ready.", flush=True)
+            print(
+                "Loading direct faster-whisper model "
+                f"{stt_cfg['model']} on {stt_cfg.get('device', 'cpu')} ...",
+                flush=True,
+            )
+            self.whisper_model = WhisperModel(
+                stt_cfg["model"],
+                device=stt_cfg.get("device", "cpu"),
+                compute_type=stt_cfg.get("compute_type", "int8"),
+                cpu_threads=int(stt_cfg.get("cpu_threads", 4)),
+                num_workers=1,
+            )
+            print("Direct faster-whisper model ready.", flush=True)
 
     def next_turn_id(self) -> int:
         self.turn_counter += 1
@@ -328,6 +331,13 @@ class VoicePipelineServer:
     async def transcribe(self, audio: bytes, timing: TurnTiming | None = None) -> str:
         if timing:
             timing.stt_start_monotonic = time.perf_counter()
+        stt_cfg = self.cfg["stt"]
+        if stt_cfg.get("provider") == "openai":
+            text = await asyncio.to_thread(self._openai_stt, audio, stt_cfg)
+            if timing:
+                timing.stt_model = f"openai:{stt_cfg.get('model', 'gpt-4o-transcribe')}"
+                timing.stt_final_monotonic = time.perf_counter()
+            return text
         # 1) GPU worker (if configured and reachable) — big model, ~0.3s
         remote = self.cfg["stt"].get("remote") or {}
         if remote.get("url"):
@@ -393,6 +403,29 @@ class VoicePipelineServer:
             timing.stt_final_monotonic = time.perf_counter()
 
         return (text or "").strip()
+
+    @staticmethod
+    def _openai_stt(audio: bytes, stt_cfg: dict) -> str:
+        key = os.environ.get(stt_cfg.get("api_key_env", "OPENAI_API_KEY"), "")
+        if not key:
+            raise RuntimeError("OpenAI speech recognition key not found")
+        sample_rate = int(stt_cfg.get("sample_rate", 16000))
+        wav_buf = io.BytesIO()
+        with wave.open(wav_buf, "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(audio)
+        response = requests.post(
+            "https://api.openai.com/v1/audio/transcriptions",
+            headers={"Authorization": f"Bearer {key}"},
+            files={"file": ("speech.wav", wav_buf.getvalue(), "audio/wav")},
+            data={"model": stt_cfg.get("model", "gpt-4o-transcribe")},
+            timeout=float(stt_cfg.get("timeout", 90)),
+        )
+        if response.status_code >= 400:
+            raise RuntimeError(f"OpenAI STT HTTP {response.status_code}: {response.text[:500]}")
+        return (response.json().get("text") or "").strip()
 
     def _remote_stt(self, audio: bytes, remote: dict) -> str | None:
         """POST raw PCM to the GPU STT worker. None = unavailable (use fallback)."""
@@ -494,6 +527,10 @@ class VoicePipelineServer:
         """Which TTS path this turn will take: 'elevenlabs' | 'piper' |
         'text-only' (deliberate) | 'unconfigured' (probably a mistake)."""
         voice = self.cfg["voice"]
+        if voice.get("provider") == "openai" and os.environ.get(
+            voice.get("api_key_env", "OPENAI_API_KEY")
+        ):
+            return "openai"
         vid = voice.get("voice_id")
         if self._tts_key() and vid and vid not in ("NOT_CONFIGURED", "YOUR_ELEVENLABS_VOICE_ID", ""):
             return "elevenlabs"
@@ -508,6 +545,9 @@ class VoicePipelineServer:
         (text-only mode)."""
         voice = self.cfg["voice"]
         backend = self.tts_backend()
+        if backend == "openai":
+            yield from self._tts_openai(text, timing)
+            return
         if backend == "elevenlabs":
             yield from self._tts_elevenlabs(text, timing, self._tts_key())
             return
@@ -525,6 +565,40 @@ class VoicePipelineServer:
                 timing.errors.append("tts_unconfigured")
             _warn_tts_unconfigured(bool(self._tts_key()), voice.get("voice_id"))
         return
+
+    def _tts_openai(self, text: str, timing: TurnTiming) -> Iterator[bytes]:
+        voice = self.cfg["voice"]
+        key = os.environ.get(voice.get("api_key_env", "OPENAI_API_KEY"), "")
+        timing.tts_model = f"openai:{voice.get('model', 'gpt-4o-mini-tts')}"
+        timing.voice_id = voice.get("voice", "onyx")
+        timing.tts_request_start_monotonic = timing.tts_request_start_monotonic or time.perf_counter()
+        record_usage(tts_chars=len(text))
+        response = requests.post(
+            "https://api.openai.com/v1/audio/speech",
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            json={
+                "model": voice.get("model", "gpt-4o-mini-tts"),
+                "voice": voice.get("voice", "onyx"),
+                "input": text,
+                "response_format": "pcm",
+            },
+            timeout=float(voice.get("timeout", 120)),
+        )
+        if response.status_code >= 400:
+            raise RuntimeError(f"OpenAI TTS HTTP {response.status_code}: {response.text[:500]}")
+        pcm_24k = response.content
+        try:
+            import audioop
+            pcm_16k, _ = audioop.ratecv(pcm_24k, 2, 1, 24000, 16000, None)
+        except ModuleNotFoundError as exc:
+            raise RuntimeError("OpenAI TTS resampling requires audioop or audioop-lts") from exc
+        for offset in range(0, len(pcm_16k), 4096):
+            chunk = pcm_16k[offset:offset + 4096]
+            if not chunk:
+                continue
+            if timing.first_tts_audio_byte_monotonic is None:
+                timing.first_tts_audio_byte_monotonic = time.perf_counter()
+            yield chunk
 
     def _tts_elevenlabs(self, text: str, timing: TurnTiming, key: str) -> Iterator[bytes]:
         voice = self.cfg["voice"]
