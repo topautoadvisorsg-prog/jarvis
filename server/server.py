@@ -1088,7 +1088,13 @@ async def hermes_proxy(path: str, request: Request) -> Response:
             headers=hermes.headers(), data=body if body else None, timeout=300,
         )
 
-    resp = await asyncio.to_thread(do_request)
+    try:
+        resp = await asyncio.to_thread(do_request)
+    except requests.RequestException as exc:
+        return JSONResponse(
+            {"error": "Hermes dashboard is unavailable", "detail": str(exc)[:300]},
+            status_code=502,
+        )
     return Response(content=resp.content, status_code=resp.status_code,
                     media_type=resp.headers.get("Content-Type", "application/json"))
 

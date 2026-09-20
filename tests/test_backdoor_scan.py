@@ -97,6 +97,7 @@ HOST_ALLOW = {
     "127.0.0.1", "0.0.0.0", "localhost",
     "jarvis.local", "jarvis", "this-machine",
     "api.elevenlabs.io",
+    "api.openai.com",         # OpenAI STT/TTS, explicitly selected in server config
     "api.open-meteo.com",      # HUD weather panel (keyless, opt-in via config)
     "huggingface.co",          # Piper voice download, documented in the example
                                # config only - never fetched by the server itself
