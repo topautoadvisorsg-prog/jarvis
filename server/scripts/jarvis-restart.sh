@@ -1,2 +1,6 @@
 #!/bin/bash
-"$(dirname "$0")/jarvis-stop.sh"; sleep 3; "$(dirname "$0")/jarvis-start.sh"
+set -e
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+bash "$SCRIPT_DIR/jarvis-stop.sh"
+sleep 2
+bash "$SCRIPT_DIR/jarvis-start.sh"

@@ -3603,7 +3603,9 @@ class TalkingHead {
       });
 
       // Connect the node to the audio graph
-      this.streamWorkletNode.connect(this.audioStreamGainNode);
+      // JARVIS: keep one audible route. audioAnalyzerNode already feeds the
+      // speech gain and destination; connecting audioStreamGainNode as well
+      // sums a second copy of the same PCM stream.
       this.streamWorkletNode.connect(this.audioAnalyzerNode);
 
       this.streamWorkletNode.port.onmessage = (event) => {

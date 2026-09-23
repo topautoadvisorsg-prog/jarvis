@@ -25,6 +25,44 @@ Why the Sessions API and not `/v1/responses` or `/v1/runs`: on Hermes v0.16,
 sessions are the only surface that combines named persistent memory, run ids,
 tool events, and approval events in one stream.
 
+## Current center-avatar architecture
+
+The approved visible avatar is the original frontal asset
+`server/hud/assets/synthetic-face-v1.png`. A small DOM mouth overlay samples the
+same TalkingHead playback `AnalyserNode` that feeds the audible stream. The
+visible portrait therefore stays stable while speech changes only the mouth
+opening and width. State changes adjust portrait glow and color treatment.
+
+The CC0 MPFB/TalkingHead model remains loaded but visually hidden. It preserves
+the proven streaming, analyser, interruption, and fallback path. This is a
+temporary compatibility layer, not the approved visible character. Future
+animation should split the portrait into eye/mouth/particle layers rather than
+restoring the rejected rotating 3D face.
+
+## Optional GPT-Live full-duplex path
+
+`gpt_live.enabled` adds a second voice transport while preserving Hermes as
+the only agent runtime. The browser negotiates WebRTC through
+`POST /api/live/session`; the OpenAI project key and session policy remain on
+the FastAPI server. GPT-Live handles continuous microphone audio, synthesized
+speech, and interruptions. It uses **client delegation** for work that needs
+memory, reasoning, tools, files, business data, or actions.
+
+When GPT-Live emits `session.delegation.created`, the browser sends the current
+transcript to the existing `/ws` connection as `live_delegate`. Hermes runs the
+request in the same persisted `jarvis-main` session and emits its normal run,
+tool, approval, STOP, and response events. The bridge suppresses the chained
+TTS copy, then returns Hermes's completed text to GPT-Live with
+`session.commentary.append`. The WebRTC output analyser drives the existing
+avatar mouth, so there is still one audible output path.
+
+GPT-Live transcript events are timing fragments rather than completed turns;
+there is no transcript-done event. The HUD groups captions with speaker and
+time gaps and briefly buffers trailing user fragments before client delegation.
+
+Closing GPT-Live does not reset Hermes memory. The original push-to-talk
+OpenAI-transcription plus TTS path remains available as a fallback.
+
 ## WebSocket protocol (voice clients)
 
 Client → server (JSON + binary):
@@ -57,6 +95,7 @@ approval_request{data,run_id} · error · done{timing}
 | `/hud/` | the HUD (static, single file) |
 | `/api/hermes/{path}` | **allowlist** proxy to Hermes API, injects the bearer key (GET: health, capabilities, skills, toolsets, jobs, sessions; POST: v1/responses only) |
 | `/api/chat` | typed chat turn on the shared voice session |
+| `/api/live/session` | authenticated server-side GPT-Live WebRTC exchange; key never reaches the browser |
 | `/api/machines` | host psutil stats + remote workers from config |
 | `/api/usage` | local token/char tally + ElevenLabs quota (needs user_read on the key) |
 | `/api/summon` | broadcasts a holographic media panel (`{media, src, title, position}` or `{action:"dismiss"}`) to every connected HUD over its WebSocket — this is what the bundled `hud_display` Hermes plugin calls |

@@ -706,6 +706,7 @@ class VoicePipelineServer:
 
     async def stream_response_audio(
         self, ws: WebSocket, transcript: str, timing: TurnTiming, conn: "ConnState",
+        *, synthesize: bool = True,
     ) -> None:
         pending = ""
         full_response: list[str] = []
@@ -713,7 +714,7 @@ class VoicePipelineServer:
         await ws.send_json({"type": "agent_status", "state": "thinking"})
 
         backend = self.tts_backend()
-        if backend in ("text-only", "unconfigured"):
+        if synthesize and backend in ("text-only", "unconfigured"):
             await ws.send_json({"type": "status", "message": (
                 "Text-only mode - no speech output configured."
                 if backend == "unconfigured"
@@ -744,7 +745,7 @@ class VoicePipelineServer:
                 pass
 
         forward_task = asyncio.create_task(forward())
-        ack_task = asyncio.create_task(ack_filler()) if ack_text else None
+        ack_task = asyncio.create_task(ack_filler()) if synthesize and ack_text else None
         try:
             while True:
                 item = await q.get()
@@ -775,6 +776,8 @@ class VoicePipelineServer:
                 # kind == "text"
                 full_response.append(value)
                 await ws.send_json({"type": "response_delta", "delta": value})
+                if not synthesize:
+                    continue
                 pending += value
                 sentences, pending = self._extract_complete_sentences(pending)
                 for sentence in sentences:
@@ -789,7 +792,7 @@ class VoicePipelineServer:
                             await ws.send_json({"type": "agent_status", "state": "speaking"})
                             spoken = True
                         await self._send_tts_sentence(ws, clean, timing)
-            tail = self._clean_for_tts(pending.strip())
+            tail = self._clean_for_tts(pending.strip()) if synthesize else ""
             if tail:
                 conn.spoken_sentences.append(tail)
                 async with tts_lock:
@@ -1170,6 +1173,79 @@ async def hud_chat(request: Request) -> JSONResponse:
         return JSONResponse({"error": str(exc)}, status_code=502)
 
 
+def _live_config() -> dict:
+    return CFG.get("gpt_live") or {}
+
+
+@app.post("/api/live/session")
+async def create_live_session(request: Request) -> JSONResponse:
+    """Exchange a browser WebRTC offer for a GPT-Live answer.
+
+    The project API key and client-delegation policy stay on this trusted
+    server. GPT-Live is the voice front end; delegated work runs in Hermes.
+    """
+    cfg = _live_config()
+    if not cfg.get("enabled", False):
+        return JSONResponse({"error": "GPT-Live is disabled"}, status_code=503)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid JSON"}, status_code=400)
+    sdp = body.get("sdp") if isinstance(body, dict) else None
+    if not isinstance(sdp, str) or not sdp.strip():
+        return JSONResponse({"error": "An SDP offer is required"}, status_code=400)
+    if len(sdp) > int(cfg.get("max_sdp_bytes", 65536)):
+        return JSONResponse({"error": "SDP offer is too large"}, status_code=413)
+    env_name = cfg.get("api_key_env", "OPENAI_API_KEY")
+    api_key = os.environ.get(env_name, "")
+    if not api_key:
+        return JSONResponse({"error": f"{env_name} is not configured on the server"}, status_code=503)
+
+    session = {
+        "model": cfg.get("model", "gpt-live-1"),
+        "instructions": cfg.get("instructions") or (
+            "You are the natural voice interface for Hermes, the user's agent. "
+            "Keep casual conversation concise. Delegate every request that needs memory, "
+            "facts, reasoning, tools, files, business data, or an action. Never claim an "
+            "action succeeded until the Hermes backend result confirms it."
+        ),
+        "delegation": {"type": "client"},
+        "audio": {"output": {"voice": cfg.get("voice", "marin")}},
+        "store": False,
+    }
+    payload = {"session": session, "transport": {"type": "webrtc", "sdp": sdp}}
+
+    def exchange() -> requests.Response:
+        return requests.post(
+            "https://api.openai.com/v1/live/sessions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=float(cfg.get("timeout", 30)),
+        )
+
+    try:
+        response = await asyncio.to_thread(exchange)
+    except requests.RequestException as exc:
+        return JSONResponse({"error": "GPT-Live session creation failed", "detail": str(exc)[:240]}, status_code=502)
+    try:
+        result = response.json()
+    except ValueError:
+        result = {"error": "GPT-Live returned a non-JSON response"}
+    if response.status_code >= 400:
+        detail = result.get("error") if isinstance(result, dict) else None
+        if isinstance(detail, dict):
+            detail = detail.get("message") or detail.get("code")
+        return JSONResponse(
+            {"error": "GPT-Live session creation failed", "detail": str(detail or "unknown error")[:300]},
+            status_code=response.status_code,
+        )
+    answer_sdp = (((result or {}).get("transport") or {}).get("sdp") or "") if isinstance(result, dict) else ""
+    media_lines = [line for line in answer_sdp.splitlines()
+                   if line.startswith(("m=audio", "a=sendrecv", "a=sendonly", "a=recvonly", "a=inactive"))]
+    print("GPT-Live WebRTC answer:", " | ".join(media_lines) or "no audio media lines", flush=True)
+    return JSONResponse(result, status_code=201)
+
+
 _ELEVEN_CACHE: dict = {"ts": 0.0, "data": None}
 
 
@@ -1533,6 +1609,7 @@ async def config_summary() -> JSONResponse:
     hermes_cfg = CFG.get("hermes") or {}
     stt_cfg = CFG.get("stt") or {}
     voice_cfg = CFG.get("voice") or {}
+    live_cfg = _live_config()
     dash_cfg = ((CFG.get("server") or {}).get("dashboard_proxy")) or {}
 
     brain = "hermes-agent" if llm_cfg.get("provider", "hermes") == "hermes" \
@@ -1543,6 +1620,8 @@ async def config_summary() -> JSONResponse:
         "stt_model": stt_cfg.get("model", "?"),
         "stt_language": stt_cfg.get("language") or "auto",
         "tts_model": voice_cfg.get("model", "?"),
+        "gpt_live_enabled": bool(live_cfg.get("enabled", False)),
+        "gpt_live_model": live_cfg.get("model", "gpt-live-1"),
         "fallback_model": hermes_cfg.get("fallback_provider") or "none",
         # None unless the deployment sets server.dashboard_proxy.external_url;
         # the HUD falls back to its existing same-host:port default when null.
@@ -1779,6 +1858,7 @@ async def _run_turn(ws: WebSocket, pipeline: VoicePipelineServer, conn: ConnStat
 
 async def _run_text_turn(
     ws: WebSocket, pipeline: VoicePipelineServer, conn: ConnState, text: str,
+    *, synthesize: bool = True, delegation_id: str | None = None,
 ) -> None:
     """Run typed HUD input through the same streamed, cancellable voice path."""
     now = time.perf_counter()
@@ -1792,9 +1872,10 @@ async def _run_text_turn(
     conn.timing = timing
     conn.spoken_sentences = []
     try:
-        await pipeline.stream_response_audio(ws, text, timing, conn)
+        await pipeline.stream_response_audio(ws, text, timing, conn, synthesize=synthesize)
         timing.total_done_monotonic = time.perf_counter()
-        await ws.send_json({"type": "done", "turn_id": timing.turn_id, "timing": timing.summary()})
+        await ws.send_json({"type": "done", "turn_id": timing.turn_id,
+                            "delegation_id": delegation_id, "timing": timing.summary()})
     except asyncio.CancelledError:
         timing.errors.append("typed turn cancelled (barge-in or stop)")
         raise
@@ -1936,6 +2017,22 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                         conn.conversation = str(event["conversation"])
                     conn.recording = False
                     conn.turn_task = asyncio.create_task(_run_text_turn(ws, pipeline, conn, text))
+                elif etype == "live_delegate":
+                    text = str(event.get("text") or "").strip()
+                    delegation_id = str(event.get("delegation_id") or "").strip()
+                    if not text or not delegation_id:
+                        await ws.send_json({"type": "error", "message": "Live delegation needs text and delegation_id."})
+                        continue
+                    if pipeline is None:
+                        pipeline = await asyncio.to_thread(get_pipeline)
+                    await _cancel_active_turn(ws, pipeline, conn)
+                    if event.get("conversation"):
+                        conn.conversation = str(event["conversation"])
+                    conn.recording = False
+                    conn.turn_task = asyncio.create_task(_run_text_turn(
+                        ws, pipeline, conn, text, synthesize=False,
+                        delegation_id=delegation_id,
+                    ))
                 elif etype == "approval_decision":
                     run_id = event.get("run_id") or conn.current_run_id
                     if not run_id:
@@ -1966,6 +2063,14 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     else:
                         _maybe_schedule_partial(ws, pipeline, conn)
     except WebSocketDisconnect:
+        if conn.turn_task and not conn.turn_task.done():
+            conn.turn_task.cancel()
+        print("Client disconnected", flush=True)
+    except RuntimeError as exc:
+        # Starlette 1.0 can surface a normal peer close as RuntimeError after
+        # the disconnect message has already been consumed.
+        if "disconnect message" not in str(exc):
+            raise
         if conn.turn_task and not conn.turn_task.done():
             conn.turn_task.cancel()
         print("Client disconnected", flush=True)

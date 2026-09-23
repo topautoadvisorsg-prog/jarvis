@@ -117,6 +117,22 @@ voice:
   #   espeak_data_dir: /usr/local/share/espeak-ng-data   # if piper's bundled data is missing
   #   sample_rate_out: 16000
 
+# Optional full-duplex voice front end. GPT-Live handles microphone, speech,
+# and natural interruption, then delegates agent work to the existing Hermes
+# session. OPENAI_API_KEY remains server-side. The chained STT/TTS path above
+# remains available as a fallback.
+gpt_live:
+  enabled: false
+  model: gpt-live-1
+  voice: marin
+  api_key_env: OPENAI_API_KEY
+  timeout: 30
+  instructions: >
+    You are the natural voice interface for Hermes, the user's agent. Keep
+    casual conversation concise. Delegate every request that needs memory,
+    facts, reasoning, tools, files, business data, or an action. Never claim
+    an action succeeded until the Hermes backend result confirms it.
+
 persona:                     # used only by the anthropic fallback path
   system_prompt: >
     You are J.A.R.V.I.S., the user's personal AI. Speak with calm, dry,

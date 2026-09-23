@@ -53,26 +53,62 @@ header .sub{font-size:12px; letter-spacing:3px; color:var(--txt-dim)}
 .dot.on{background:var(--teal); box-shadow:0 0 6px var(--teal)}
 .dot.off{background:var(--red); box-shadow:0 0 6px var(--red)}
 #center{display:flex; flex-direction:column; align-items:center; justify-content:flex-start; position:relative; overflow:hidden}
-#reactorWrap{position:relative; width:min(46vh,440px); height:min(46vh,440px); cursor:pointer; flex-shrink:0}
+#reactorWrap{position:relative; width:min(66vh,620px); height:min(66vh,620px); cursor:pointer; flex-shrink:0}
 #reactor{position:absolute; inset:0; width:100%; height:100%; z-index:2; pointer-events:none}
-#avatarStage{position:absolute; inset:10%; z-index:1; opacity:0; transform:scale(.92); overflow:hidden;
+#avatarStage{position:absolute; inset:2%; z-index:1; opacity:0; transform:scale(.92); overflow:hidden;
   border-radius:50%; transition:opacity .45s ease,transform .45s ease,filter .28s ease;
-  filter:saturate(.55) hue-rotate(145deg) contrast(1.15) brightness(.9) drop-shadow(0 0 12px #00e5ff88)}
+  filter:saturate(.8) contrast(1.18) brightness(.9) drop-shadow(0 0 12px #00e5ff88)}
 #avatarStage canvas{width:100%!important;height:100%!important;display:block}
+#avatarStage.synthetic-mounted canvas{opacity:0!important}
+#syntheticPortrait{position:absolute;inset:1%;z-index:1;opacity:0;pointer-events:none;
+  transform:translateY(0) scale(.94);transform-origin:50% 58%;transition:opacity .5s ease,filter .3s ease,transform .35s ease;
+  animation:portraitHover 7s ease-in-out infinite}
+#avatarStage.synthetic-mounted #syntheticPortrait{opacity:1}
+#syntheticPortrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 0 7px #22d8ffcc) drop-shadow(0 0 22px #007aa088)}
+#syntheticMouth{position:absolute;z-index:3;left:50%;top:68%;width:9.5%;height:1px;
+  transform:translate(-50%,-50%);border-radius:48%;overflow:hidden;
+  border-top:1px solid #72f4ffcc;border-bottom:1px solid #10a9d9aa;
+  background:radial-gradient(ellipse at center,#041520 0 42%,#087a9655 58%,transparent 75%);
+  box-shadow:0 0 3px #12dfffb3;
+  transition:width 36ms linear,height 36ms linear,box-shadow 55ms linear}
+#syntheticMouth::after{content:"";position:absolute;left:8%;right:8%;top:50%;height:1px;
+  background:#b8faffcc;box-shadow:0 0 4px #37e8ff;opacity:var(--mouth-line-opacity,.82)}
+#syntheticEyePulse{position:absolute;inset:0;z-index:2;background:
+  radial-gradient(circle at 40.2% 45.6%,#b9fbff66 0 1.2%,transparent 3.8%),
+  radial-gradient(circle at 59.8% 45.6%,#b9fbff66 0 1.2%,transparent 3.8%);
+  mix-blend-mode:screen;animation:eyePulse 3.8s ease-in-out infinite}
+#reactorWrap[data-avatar-state="listening"] #syntheticPortrait{transform:scale(.975);filter:brightness(1.2) saturate(1.15)}
+#reactorWrap[data-avatar-state="thinking"] #syntheticPortrait,
+#reactorWrap[data-avatar-state="tool"] #syntheticPortrait{filter:hue-rotate(-18deg) brightness(1.12) drop-shadow(0 0 15px #ffc24788)}
+#reactorWrap[data-avatar-state="speaking"] #syntheticPortrait{filter:brightness(1.13) saturate(1.08)}
+@keyframes portraitHover{0%,100%{translate:0 1px}50%{translate:0 -3px}}
+@keyframes eyePulse{0%,100%{opacity:.38}50%{opacity:.82}}
+#avatarStage::before{content:"01001  JARVIS  10110  SYS  01101";position:absolute;inset:8%;z-index:2;pointer-events:none;
+  border:1px solid #00e5ff28;border-radius:50%;color:#00e5ff35;font-family:'Orbitron';font-size:7px;letter-spacing:4px;
+  padding-top:8%;text-align:center;box-shadow:inset 0 0 34px #00e5ff18;animation:codeOrbit 14s linear infinite}
 #avatarStage::after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;
   background:repeating-linear-gradient(0deg,transparent 0 4px,#00e5ff12 4px 5px),
     radial-gradient(circle at 50% 44%,transparent 0 42%,#00e5ff14 65%,transparent 76%)}
 #reactorWrap.avatar-ready #avatarStage{opacity:.96;transform:scale(1)}
-#reactorWrap[data-avatar-state="listening"] #avatarStage{filter:saturate(.7) hue-rotate(120deg) contrast(1.2) brightness(1.15) drop-shadow(0 0 20px #19f0d8cc)}
+#reactorWrap[data-avatar-state="listening"] #avatarStage{filter:saturate(1.05) contrast(1.2) brightness(1.15) drop-shadow(0 0 20px #19f0d8cc)}
 #reactorWrap[data-avatar-state="thinking"] #avatarStage,
-#reactorWrap[data-avatar-state="tool"] #avatarStage{filter:saturate(.75) hue-rotate(185deg) contrast(1.25) brightness(1.08) drop-shadow(0 0 20px #ffb300aa)}
+#reactorWrap[data-avatar-state="tool"] #avatarStage{filter:saturate(.9) contrast(1.25) brightness(1.08) drop-shadow(0 0 20px #ffb300aa)}
 #reactorWrap[data-avatar-state="speaking"] #avatarStage{animation:avatarSpeakGlow .8s ease-in-out infinite alternate}
-@keyframes avatarSpeakGlow{from{filter:saturate(.6) hue-rotate(145deg) contrast(1.15) brightness(.95) drop-shadow(0 0 10px #00e5ff88)}to{filter:saturate(.8) hue-rotate(145deg) contrast(1.25) brightness(1.2) drop-shadow(0 0 25px #00e5ffdd)}}
+@keyframes avatarSpeakGlow{from{filter:saturate(.85) contrast(1.15) brightness(.95) drop-shadow(0 0 10px #00e5ff88)}to{filter:saturate(1.1) contrast(1.25) brightness(1.2) drop-shadow(0 0 25px #00e5ffdd)}}
+@keyframes codeOrbit{to{transform:rotate(360deg)}}
 #reactorWrap.avatar-visualizing #avatarStage{opacity:0;transform:scale(.72) rotateY(18deg);filter:blur(9px) brightness(1.8)}
 #avatarStatus{position:absolute;left:50%;bottom:5%;z-index:4;transform:translateX(-50%);white-space:nowrap;
   font-family:'Orbitron';font-size:7px;letter-spacing:1.6px;color:var(--txt-dim);pointer-events:none}
 #avatarStatus[data-kind="ready"]{color:var(--cyan-dim)}
 #avatarStatus[data-kind="error"]{color:var(--red)}
+#debugPanel{display:none;position:fixed;right:12px;bottom:34px;z-index:60;width:300px;padding:10px 12px;
+  border:1px solid #00e5ff88;background:#020912f2;box-shadow:0 0 24px #00e5ff33;
+  font:11px/1.35 'Rajdhani',sans-serif;color:var(--txt)}
+body.debug-audio #debugPanel{display:block}
+#debugPanel h3{font:10px 'Orbitron';letter-spacing:2px;color:var(--cyan);margin-bottom:7px}
+#debugPanel .kv{border-bottom:1px solid #0e2c4066;padding:2px 0}
+#debugPanel b{font-family:monospace;color:var(--teal)}
 #coreState{
   position:absolute; inset:0; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;
   pointer-events:none; font-family:'Orbitron';
@@ -237,7 +273,7 @@ body.booted header{animation:panelIn .4s backwards}
   header .sub{display:none}
   #clock{font-size:12px}
   #center{order:1; min-height:0}
-  #reactorWrap{width:min(62vw,260px); height:min(62vw,260px)}
+  #reactorWrap{width:min(92vw,430px); height:min(92vw,430px)}
   #coreState .st{font-size:12px; letter-spacing:4px}
   #coreState .hint{font-size:8px}
   #feed{max-height:34dvh; min-height:90px}
@@ -291,6 +327,7 @@ footer{
       <div class="bar"><i id="levelBar"></i></div>
       <div style="margin-top:8px; display:flex; gap:6px">
         <button class="btn" id="talkBtn" style="flex:1">ENGAGE VOICE</button>
+        <button class="btn" id="liveBtn" style="display:none" title="Full-duplex GPT-Live voice with Hermes delegation">GPT LIVE</button>
         <button class="btn danger" id="stopBtn">■ STOP</button>
       </div>
     </div>
@@ -387,6 +424,22 @@ footer{
     </div>
   </div>
 
+  <div id="debugPanel" aria-hidden="true">
+    <h3>AUDIO CLOCK · CTRL+SHIFT+D</h3>
+    <div class="kv"><span>Utterance</span><b id="dbgUtterance">0</b></div>
+    <div class="kv"><span>Hermes turn</span><b id="dbgTurn">—</b></div>
+    <div class="kv"><span>TTS state</span><b id="dbgTts">IDLE</b></div>
+    <div class="kv"><span>PCM format</span><b id="dbgRate">16000 Hz · S16LE · mono</b></div>
+    <div class="kv"><span>Queued PCM</span><b id="dbgQueue">0 ms</b></div>
+    <div class="kv"><span>Playback clock</span><b id="dbgPlayback">0.000 s</b></div>
+    <div class="kv"><span>Avatar clock</span><b id="dbgAvatar">0.000 s</b></div>
+    <div class="kv"><span>Lip-sync</span><b>PCM 14-VISEME</b></div>
+    <div class="kv"><span>Chunks</span><b id="dbgChunks">0</b></div>
+    <div class="kv"><span>Dropped stale</span><b id="dbgDropped">0</b></div>
+    <div class="kv"><span>HUD state</span><b id="dbgState">STANDBY</b></div>
+    <div class="kv"><span>Interrupts</span><b id="dbgInterrupts">0</b></div>
+  </div>
+
   <footer>
     <span></span>
     <span id="footMsg">READY</span>
@@ -398,17 +451,24 @@ footer{
 {"imports":{
   "three":"./vendor/three/build/three.module.js",
   "three/addons/":"./vendor/three/examples/jsm/",
-  "talkinghead":"./vendor/talkinghead/talkinghead.mjs"
+  "talkinghead":"./vendor/talkinghead/talkinghead.mjs?v=stream1"
 }}</script>
-<script type="module" src="./avatar-controller.mjs"></script>
+<script type="module" src="./avatar-controller.mjs?v=portrait5"></script>
 <script>
 "use strict";
 /* ============================== state ============================== */
 const CONV = "jarvis-main";
 let ws=null, wsReady=false, capturing=false, state="standby";
 let audioCtx=null, workletNode=null, mediaStream=null, srcNode=null;
-let playhead=0, activeSources=[], leftoverByte=null, audioArrived=false;
 let level=0, turns=0;
+const PCM_SAMPLE_RATE=16000;
+let utteranceSeq=0, activeUtterance=0, acceptAudio=false;
+let audioChunks=0, droppedAudioChunks=0, interruptCount=0;
+let liveEnabled=false, livePc=null, liveDc=null, liveMic=null, liveAudio=null, liveAnalysisTrack=null, liveActive=false;
+let liveInputTranscript="", liveLastInput="", liveInputShown=false, liveBackendText="", liveDelegationId=null;
+let liveSessionId=null, liveRemoteAudio=false;
+let liveInputEl=null, liveOutputEl=null, liveInputAt=0, liveOutputAt=0, liveInputTimer=null, liveOutputTimer=null, liveDelegationTimer=null;
+window.__jarvisLiveEvents=[];
 
 const $=id=>document.getElementById(id);
 const feed=$("feed");
@@ -471,6 +531,16 @@ function frame(t){
     ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
     ctx.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2); ctx.stroke();
   }
+  // sparse hologram particles, phase-locked to the reactor animation
+  for(let i=0;i<28;i++){
+    const phase=i*2.399+rot*.006;
+    const orbit=base*(.2+((i*37)%100)/145);
+    const px=cx+Math.cos(phase)*orbit;
+    const py=cy+Math.sin(phase*1.31)*orbit*.86;
+    const pr=(i%5===0?1.7:.85)*devicePixelRatio;
+    ctx.beginPath();ctx.fillStyle=s.color;ctx.globalAlpha=.12+(i%4)*.035;
+    ctx.arc(px,py,pr,0,Math.PI*2);ctx.fill();
+  }
   ctx.globalAlpha=1;
   // core
   ctx.shadowColor=s.color; ctx.shadowBlur=40*devicePixelRatio;
@@ -486,6 +556,7 @@ function setState(st,label,hint){
   state=st;
   window.JarvisAvatar?.setState(st);
   $("stateLabel").textContent=label;
+  if($("dbgState"))$("dbgState").textContent=String(label||st).toUpperCase();
   if(hint!==undefined)$("stateHint").textContent=hint;
 }
 
@@ -522,8 +593,55 @@ function showStop(on){ $("stopBtn").style.display=on?"block":"none"; }
 function stopRun(){
   stopPlayback();
   if(wsReady)ws.send(JSON.stringify({type:"stop_run"}));
+  if(liveActive) stopLiveVoice();
+  setState("standby","STANDBY");
   showStop(false);
 }
+
+function updateAudioDebug(){
+  $("dbgUtterance").textContent=activeUtterance||0;
+  $("dbgTurn").textContent=currentRun||"—";
+  $("dbgChunks").textContent=audioChunks;
+  $("dbgDropped").textContent=droppedAudioChunks;
+  $("dbgInterrupts").textContent=interruptCount;
+}
+function beginAudioStream(turnId=currentRun){
+  if(acceptAudio)return activeUtterance;
+  activeUtterance=++utteranceSeq;
+  acceptAudio=true; audioChunks=0;
+  $("dbgTts").textContent="STARTING";
+  $("dbgQueue").textContent="0 ms";
+  $("dbgTurn").textContent=turnId||"—";
+  updateAudioDebug();
+  window.JarvisAvatar?.startStream({sampleRate:PCM_SAMPLE_RATE,generation:activeUtterance});
+  return activeUtterance;
+}
+function receiveAudioChunk(buf){
+  if(!acceptAudio){droppedAudioChunks++;updateAudioDebug();return}
+  audioChunks++; updateAudioDebug();
+  if(!window.JarvisAvatar?.pushPCM(buf,activeUtterance)){droppedAudioChunks++;updateAudioDebug()}
+}
+function endAudioStream(){
+  if(!acceptAudio)return;
+  acceptAudio=false;
+  $("dbgTts").textContent="DRAINING";
+  window.JarvisAvatar?.endStream(activeUtterance);
+}
+addEventListener("jarvis-avatar-audio",e=>{
+  const d=e.detail||{};
+  if(d.generation&&d.generation!==activeUtterance)return;
+  if(d.type==="playback-started"){$("dbgTts").textContent="PLAYING";showStop(true)}
+  else if(d.type==="playback-ended"){
+    $("dbgTts").textContent="IDLE";$("dbgQueue").textContent="0 ms";
+    if(!currentRun)showStop(false);
+    if(!capturing&&state==="speaking")setState("standby","STANDBY");
+  }else if(d.type==="interrupted"){$("dbgTts").textContent="INTERRUPTED";$("dbgQueue").textContent="0 ms";showStop(false)}
+  else if(d.type==="metrics"){
+    $("dbgQueue").textContent=(d.queuedMs||0)+" ms";
+    if(d.playbackTime!=null)$("dbgPlayback").textContent=Number(d.playbackTime).toFixed(3)+" s";
+    if(d.avatarTime!=null)$("dbgAvatar").textContent=Number(d.avatarTime).toFixed(3)+" s";
+  }
+});
 
 /* approval cards */
 function showApproval(e){
@@ -549,45 +667,216 @@ function connect(){
   ws.onclose=()=>{wsReady=false;$("wsDot").className="dot off";$("wsState").textContent="offline";$("connState").textContent="LINK DOWN";setState("standby","STANDBY");setTimeout(connect,3000)};
   ws.onerror=()=>{};
   ws.onmessage=ev=>{
-    if(ev.data instanceof ArrayBuffer){playChunk(ev.data);return}
+    if(ev.data instanceof ArrayBuffer){receiveAudioChunk(ev.data);return}
     let e; try{e=JSON.parse(ev.data)}catch{return}
     if(e.type==="summon_panel"){ summonPanel(e); }
     else if(e.type==="dismiss_panels"){ dismissAllPanels(); }
     else if(e.type==="speak_start"){        // proactive (unprompted) speech
       if(e.priority==="high") stopPlayback();   // barge-in over current audio
+      beginAudioStream(e.run_id||"proactive");
       ensureCtx(); audioNudge(); earcon("chime");
       if(e.text) addMsg("jarvis", e.text);      // subtitle (textContent — XSS-safe)
       setState("speaking","INCOMING");
     }
     else if(e.type==="speak_end"){
-      settleAfterAudio();
+      endAudioStream();
     }
     else if(e.type==="partial_transcript"){ showLive(e.text); }
     else if(e.type==="transcript"){ clearLive(); if(e.text)addMsg("you",e.text); }
-    else if(e.type==="response_delta"){ streamAssistant(e.delta); }
-    else if(e.type==="run_started"){ currentRun=e.run_id; showStop(true); }
+    else if(e.type==="response_delta"){
+      if(liveDelegationId) liveBackendText+=e.delta||"";
+      else streamAssistant(e.delta);
+    }
+    else if(e.type==="run_started"){ currentRun=e.run_id; showStop(true); updateAudioDebug(); }
     else if(e.type==="approval_request"){ earcon("alert"); showApproval(e); }
     else if(e.type==="agent_status"){
       if(e.state==="thinking"){setState("thinking","PROCESSING");showStop(true)}
       else if(e.state==="tool_use"){setState("tool","WORKING");addActivity("",e.tool||"tool",e.preview)}
-      else if(e.state==="speaking")setState("speaking","SPEAKING");
+      else if(e.state==="speaking"){beginAudioStream(currentRun);setState("speaking","SPEAKING");showStop(true)}
       else if(e.state==="stopped"){setState("standby","STANDBY");showStop(false);stopPlayback();addMsg("sys","run stopped")}
     }
     else if(e.type==="error"){ earcon("error"); clearLive(); addMsg("sys","error: "+e.message); setState("standby","STANDBY"); showStop(false); }
     else if(e.type==="done"){
-      currentRun=null; showStop(false);
+      currentRun=null; if(state!=="speaking")showStop(false);
       const tm=e.timing||{};
       turns++; $("mTurns").textContent=turns;
       if(tm.end_of_speech_to_first_audio_seconds!=null)$("mFirst").textContent=tm.end_of_speech_to_first_audio_seconds+"s";
       if(tm.total_turn_seconds!=null)$("mTotal").textContent=tm.total_turn_seconds+"s";
       $("mBrain").textContent=tm.llm_provider||"—";
+      if(e.delegation_id&&liveDc?.readyState==="open"){
+        const result=(liveBackendText||tm.response_text||"Hermes completed the task without a text result.").trim();
+        liveDc.send(JSON.stringify({type:"session.commentary.append",event_id:`hermes_${Date.now()}`,
+          delegation_id:e.delegation_id,content:result.slice(0,1800)}));
+        liveBackendText=""; liveDelegationId=null;
+        setState("speaking","RESPONDING");
+      }
       if(assistantLiveEl){ assistantLiveEl.classList.remove("live"); assistantLiveEl=null; }
-      else if(tm.response_text)addMsg("jarvis",tm.response_text);
-      settleAfterAudio();
+      else if(tm.response_text&&!e.delegation_id)addMsg("jarvis",tm.response_text);
+      endAudioStream();
     }
   };
 }
 connect();
+
+/* ============================== GPT-Live =========================== */
+function waitForIce(pc){
+  if(pc.iceGatheringState==="complete")return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{pc.removeEventListener("icegatheringstatechange",check);reject(new Error("WebRTC negotiation timed out"))},10000);
+    const check=()=>{if(pc.iceGatheringState==="complete"){clearTimeout(timer);pc.removeEventListener("icegatheringstatechange",check);resolve()}};
+    pc.addEventListener("icegatheringstatechange",check);
+  });
+}
+function liveSendHermes(delegationId){
+  const text=(liveInputTranscript||liveLastInput).trim();
+  liveInputTranscript=""; liveLastInput=""; clearLive();
+  if(!text||!wsReady){
+    liveDc?.send(JSON.stringify({type:"session.commentary.append",event_id:`hermes_error_${Date.now()}`,
+      delegation_id:delegationId,content:wsReady?"I could not identify a complete request. Please ask again.":"Hermes is offline right now."}));
+    return;
+  }
+  if(!liveInputShown)addMsg("you",text);
+  liveInputShown=false; liveDelegationId=delegationId; liveBackendText="";
+  ws.send(JSON.stringify({type:"live_delegate",text,delegation_id:delegationId,conversation:CONV}));
+  setState("thinking","HERMES PROCESSING"); showStop(true);
+}
+function appendLiveCaption(role,delta){
+  if(!delta)return;
+  const now=Date.now();
+  if(role==="you"){
+    if(liveActive)setState("listening","LISTENING","GPT LIVE · FULL DUPLEX");
+    if(!liveInputEl||now-liveInputAt>1600){
+      if(liveInputEl)liveInputEl.classList.remove("live");
+      liveInputEl=addMsg("you live","");
+    }
+    liveInputEl.textContent+=delta; liveInputAt=now; liveInputShown=true;
+    liveInputTranscript+=delta;
+    clearTimeout(liveInputTimer);
+    liveInputTimer=setTimeout(()=>{
+      liveLastInput=liveInputTranscript.trim(); liveInputTranscript="";
+      liveInputEl?.classList.remove("live"); liveInputEl=null;
+    },1200);
+  }else{
+    if(!liveOutputEl||now-liveOutputAt>1600){
+      if(liveOutputEl)liveOutputEl.classList.remove("live");
+      liveOutputEl=addMsg("jarvis live","");
+    }
+    liveOutputEl.textContent+=delta; liveOutputAt=now;
+    clearTimeout(liveOutputTimer);
+    liveOutputTimer=setTimeout(()=>{
+      liveOutputEl?.classList.remove("live"); liveOutputEl=null;
+      if(liveActive)setState("listening","GPT LIVE","FULL DUPLEX · HERMES CONNECTED");
+    },1000);
+  }
+  feed.scrollTop=feed.scrollHeight;
+}
+function handleLiveEvent(event){
+  let e; try{e=JSON.parse(event.data)}catch{return}
+  window.__jarvisLiveEvents.push({at:new Date().toISOString(),type:e.type});
+  if(window.__jarvisLiveEvents.length>80)window.__jarvisLiveEvents.shift();
+  if(e.type==="session.started"){
+    liveSessionId=e.session?.id||null;
+    setState("listening","GPT LIVE","FULL DUPLEX · HERMES CONNECTED");
+    $("liveBtn").textContent="END LIVE"; $("micState").textContent="GPT LIVE"; showStop(true);
+    // Immediate audible acceptance check. If this text appears but cannot be
+    // heard, the HUD can identify playback as the failing stage.
+    liveDc?.send(JSON.stringify({type:"session.instructions.append",event_id:`voice_ready_${Date.now()}`,
+      delegation_id:null,content:"Immediately say exactly: GPT Live voice link active. Then pause and listen."}));
+  }else if(e.type==="session.input_transcript.delta"){
+    appendLiveCaption("you",e.delta||"");
+  }else if(e.type==="session.output_transcript.delta"){
+    setState("speaking","SPEAKING"); appendLiveCaption("jarvis",e.delta||"");
+    setTimeout(()=>{
+      if(liveActive&&!liveRemoteAudio){
+        addMsg("sys","GPT Live returned text but audio playback is blocked. Click ENABLE AUDIO.");
+        $("liveBtn").textContent="ENABLE AUDIO";
+      }
+    },1200);
+  }else if(e.type==="session.delegation.created"&&e.delegation?.target==="client"){
+    clearTimeout(liveDelegationTimer);
+    liveDelegationTimer=setTimeout(()=>liveSendHermes(e.delegation.id),350);
+  }else if(e.type==="session.closed"){
+    cleanupLiveVoice();
+  }else if(e.type==="error"){
+    addMsg("sys","GPT Live: "+(e.error?.message||e.message||"session error"));
+  }
+}
+async function startLiveVoice(){
+  if(liveActive)return;
+  if(!wsReady)throw new Error("Hermes voice server is offline");
+  livePc=new RTCPeerConnection();
+  livePc.onconnectionstatechange=()=>{$("liveBtn").dataset.pc=livePc?.connectionState||"closed"};
+  liveDc=livePc.createDataChannel("oai-events");
+  liveDc.onmessage=handleLiveEvent;
+  liveDc.onclose=()=>{if(liveActive)stopLiveVoice()};
+  liveMic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  liveMic.getTracks().forEach(track=>livePc.addTrack(track,liveMic));
+  livePc.ontrack=event=>{
+    $("liveBtn").dataset.track=`${event.track.kind}:${event.track.readyState}`;
+    // Use OpenAI's documented media-element playback path. A cloned muted
+    // track feeds the avatar analyser without creating duplicate audible audio.
+    liveAudio=new Audio(); liveAudio.autoplay=true; liveAudio.playsInline=true;
+    liveAudio.style.display="none"; document.body.appendChild(liveAudio);
+    liveAudio.srcObject=new MediaStream([event.track]);
+    liveAudio.onplaying=()=>{liveRemoteAudio=true;$("liveBtn").dataset.play="playing";$("micState").textContent="GPT LIVE · AUDIO"};
+    liveAudio.onerror=()=>addMsg("sys","GPT Live audio output failed to play.");
+    liveAudio.play().then(()=>{liveRemoteAudio=true;$("micState").textContent="GPT LIVE · AUDIO"}).catch(()=>{
+      addMsg("sys","GPT Live audio is blocked. Click GPT LIVE once to enable playback.");
+      $("liveBtn").textContent="ENABLE AUDIO";
+    });
+    try{
+      ensureCtx(); liveAnalysisTrack=event.track.clone();
+      const source=audioCtx.createMediaStreamSource(new MediaStream([liveAnalysisTrack]));
+      const analyser=audioCtx.createAnalyser(); analyser.fftSize=1024;
+      const silent=audioCtx.createGain(); silent.gain.value=0;
+      source.connect(analyser); analyser.connect(silent); silent.connect(audioCtx.destination);
+      window.JarvisAvatar?.bindAudioAnalyser(analyser);
+    }catch(err){console.warn("GPT Live avatar analyser unavailable",err)}
+  };
+  const offer=await livePc.createOffer();
+  await livePc.setLocalDescription(offer); await waitForIce(livePc);
+  const response=await fetch("/api/live/session",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({sdp:livePc.localDescription.sdp})});
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.detail||result.error||`HTTP ${response.status}`);
+  liveRemoteAudio=false;
+  await livePc.setRemoteDescription({type:"answer",sdp:result.transport.sdp});
+  $("liveBtn").dataset.receivers=livePc.getReceivers().map(r=>`${r.track?.kind||"none"}:${r.track?.readyState||"none"}`).join(",")||"none";
+  liveActive=true; earcon("listen"); setState("listening","CONNECTING LIVE");
+  setTimeout(()=>{
+    if(liveActive&&!liveAudio){
+      addMsg("sys",`GPT Live connected without a remote audio track (receivers: ${$("liveBtn").dataset.receivers||"none"}).`);
+    }
+  },2500);
+}
+function cleanupLiveVoice(){
+  liveActive=false; liveInputTranscript=""; liveLastInput=""; liveInputShown=false; liveBackendText=""; liveDelegationId=null;
+  liveSessionId=null; liveRemoteAudio=false;
+  clearTimeout(liveInputTimer); clearTimeout(liveOutputTimer); clearTimeout(liveDelegationTimer);
+  try{liveAudio?.pause()}catch{} if(liveAudio){liveAudio.srcObject=null;liveAudio.remove()}
+  try{liveAnalysisTrack?.stop()}catch{}
+  try{liveDc?.close()}catch{} try{livePc?.close()}catch{}
+  liveMic?.getTracks().forEach(track=>track.stop());
+  liveDc=null; livePc=null; liveMic=null; liveAudio=null; liveAnalysisTrack=null;
+  liveInputEl=null; liveOutputEl=null; liveInputAt=0; liveOutputAt=0; clearLive();
+  if(assistantLiveEl){assistantLiveEl.classList.remove("live");assistantLiveEl=null}
+  $("liveBtn").textContent="GPT LIVE"; $("micState").textContent="ready";
+  window.JarvisAvatar?.setState("standby"); setState("standby","STANDBY"); showStop(false);
+}
+function stopLiveVoice(){
+  if(liveDc?.readyState==="open"){
+    try{liveDc.send(JSON.stringify({type:"session.close"}))}catch{}
+  }
+  cleanupLiveVoice();
+}
+$("liveBtn").onclick=async()=>{
+  if(liveActive&&liveAudio?.paused){
+    try{await liveAudio.play();$("liveBtn").textContent="END LIVE";return}catch{}
+  }
+  if(liveActive){stopLiveVoice();return}
+  try{$("liveBtn").textContent="CONNECTING";await startLiveVoice()}
+  catch(err){stopLiveVoice();addMsg("sys","GPT Live unavailable: "+err.message);earcon("error")}
+};
 
 /* ============================== audio out ========================== */
 function ensureCtx(){
@@ -597,28 +886,11 @@ function ensureCtx(){
   }
   if(audioCtx.state==="suspended")audioCtx.resume();
 }
-function playChunk(buf){
-  ensureCtx();
-  let bytes=new Uint8Array(buf);
-  if(leftoverByte!==null){const m=new Uint8Array(bytes.length+1);m[0]=leftoverByte;m.set(bytes,1);bytes=m;leftoverByte=null}
-  if(bytes.length%2===1){leftoverByte=bytes[bytes.length-1];bytes=bytes.subarray(0,bytes.length-1)}
-  if(!bytes.length)return;
-  const i16=new Int16Array(bytes.buffer,bytes.byteOffset,bytes.length/2);
-  const f32=new Float32Array(i16.length);
-  for(let i=0;i<i16.length;i++)f32[i]=i16[i]/32768;
-  const ab=audioCtx.createBuffer(1,f32.length,16000); ab.copyToChannel(f32,0);
-  const src=audioCtx.createBufferSource(); src.buffer=ab; src.connect(audioCtx.destination);
-  const t=Math.max(audioCtx.currentTime+0.06,playhead);
-  window.JarvisAvatar?.schedulePCM(buf,Math.max(0,(t-audioCtx.currentTime)*1000),ab.duration*1000);
-  src.start(t); playhead=t+ab.duration;
-  activeSources.push(src); src.onended=()=>{activeSources=activeSources.filter(x=>x!==src);settleAfterAudio()};
-  audioArrived=true;
+function stopPlayback(){
+  if(!activeUtterance)return;
+  acceptAudio=false;
+  if(window.JarvisAvatar?.interrupt(activeUtterance)){interruptCount++;updateAudioDebug()}
 }
-function settleAfterAudio(){
-  if(activeSources.length||capturing||state==="thinking"||state==="tool")return;
-  if(state==="speaking")setTimeout(()=>{if(!activeSources.length&&state==="speaking")setState("standby","STANDBY")},180);
-}
-function stopPlayback(){ activeSources.forEach(s=>{try{s.stop()}catch{}}); activeSources=[]; playhead=0; window.JarvisAvatar?.interrupt(); }
 
 /* ============================== audio in =========================== */
 const workletCode=`
@@ -682,7 +954,6 @@ async function toggleTalk(){
   }
   try{await initMic()}catch(err){addMsg("sys","mic blocked: "+err.message);return}
   stopPlayback();                       // barge-in
-  audioArrived=false;
   ws.send(JSON.stringify({type:"start",sample_rate:16000,format:"pcm_s16le",channels:1,conversation:CONV}));
   capturing=true; earcon("listen");
   $("talkBtn").textContent="■ STOP & SEND"; $("micState").textContent="LIVE";
@@ -727,7 +998,6 @@ async function sendChat(){
   const inp=$("chatInput"); const text=inp.value.trim(); if(!text)return;
   inp.value=""; addMsg("you",text); setState("thinking","PROCESSING");
   if(wsReady){
-    audioArrived=false;
     ws.send(JSON.stringify({type:"text_input",text,conversation:CONV}));
     return;
   }
@@ -826,6 +1096,8 @@ async function refreshModels(){
     if(j.brain)$("mdBrain").textContent=j.brain;
     if(j.stt_model)$("mdStt").textContent=`${j.stt_model} (${j.stt_language||"auto"})`;
     if(j.tts_model)$("mdTts").textContent=j.tts_model;
+    liveEnabled=Boolean(j.gpt_live_enabled);
+    if(liveEnabled){$("liveBtn").style.display="block";$("mdTts").textContent=j.gpt_live_model+" + "+$("mdTts").textContent}
     if(j.fallback_model)$("mdFallback").textContent=j.fallback_model;
     if(j.dashboard_proxy_url) DASH_PROXY=j.dashboard_proxy_url;
     else if(j.dashboard_proxy_port) DASH_PROXY=`https://${location.hostname}:${j.dashboard_proxy_port}`;
@@ -1119,7 +1391,14 @@ async function bootSequence(full){
 }
 addEventListener("keydown",e=>{
   if((e.key==="b"||e.key==="B")&&document.activeElement!==$("chatInput"))bootSequence(true);
+  if(e.ctrlKey&&e.shiftKey&&e.code==="KeyD"){
+    e.preventDefault();document.body.classList.toggle("debug-audio");
+    $("debugPanel").setAttribute("aria-hidden",document.body.classList.contains("debug-audio")?"false":"true");
+  }
 });
+if(new URLSearchParams(location.search).get("debug")==="1"){
+  document.body.classList.add("debug-audio");$("debugPanel").setAttribute("aria-hidden","false");
+}
 bootSequence(new URLSearchParams(location.search).get("boot")==="full");
 
 addMsg("sys","Jarvis HUD online. Click the ring or press Space to talk.");

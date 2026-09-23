@@ -71,15 +71,22 @@ def server_mod():
 
 @pytest.fixture()
 def no_token(monkeypatch, server_mod):
-    """Default deployment posture: JARVIS_HUD_TOKEN unset -> auth disabled."""
+    """Default deployment posture: configured HUD token unset -> auth disabled."""
+    token_env = (server_mod.CFG.get("security") or {}).get(
+        "hud_token_env", "JARVIS_HUD_TOKEN"
+    )
     monkeypatch.delenv("JARVIS_HUD_TOKEN", raising=False)
+    monkeypatch.delenv(token_env, raising=False)
     return server_mod
 
 
 @pytest.fixture()
 def with_token(monkeypatch, server_mod):
-    """Hardened posture: a HUD token is configured."""
-    monkeypatch.setenv("JARVIS_HUD_TOKEN", "s3cr3t-token")
+    """Hardened posture: the configured HUD token variable is populated."""
+    token_env = (server_mod.CFG.get("security") or {}).get(
+        "hud_token_env", "JARVIS_HUD_TOKEN"
+    )
+    monkeypatch.setenv(token_env, "s3cr3t-token")
     return server_mod
 
 
