@@ -16,7 +16,7 @@ The target remains:
 ```mermaid
 flowchart LR
     B[Buddy] --> J[Jarvis HUD / Hermes jarvis-main]
-    T[Telegram] --> J
+    W[WhatsApp] --> J
     P[Approved phone escalation] --> J
 
     J --> PB[Policy and approval broker]
@@ -49,16 +49,16 @@ human approval, and deterministic execution remain authoritative.
 - Hermes v0.21.0 is installed locally. The upstream main branch has moved far
   beyond that release, so upgrading must be a separate compatibility project;
   this roadmap does not upgrade it.
-- The installed Hermes version already includes Telegram, incoming Telegram
-  voice transcription, Telegram TTS delivery, `/stop`, scheduled jobs, webhook
+- The installed Hermes version already includes WhatsApp, incoming WhatsApp
+  voice transcription, WhatsApp TTS delivery, `/stop`, scheduled jobs, webhook
   inputs, HMAC verification, cross-platform session handoff, session search,
   memory, toolsets, and per-session model selection.
-- The supported `/handoff telegram` flow can transfer the current session ID,
-  transcript, and tool history to Telegram. The remote experience must bind to
+- The supported `/handoff whatsapp` flow can transfer the current session ID,
+  transcript, and tool history to WhatsApp. The remote experience must bind to
   `jarvis-main` through that flow instead of silently creating a second Jarvis
   conversation.
 - Approval mode is `manual`; cron authority is denied.
-- The Hermes gateway is currently stopped. Telegram and webhook credentials are
+- The Hermes gateway is currently stopped. WhatsApp and webhook credentials are
   not configured. No cron jobs exist.
 - Computer Use is present as a Hermes tool, but `cua-driver` is not installed on
   either Windows or WSL. It is therefore unavailable today.
@@ -119,15 +119,15 @@ are not yet one reconciled business budget.
 
 | Capability | Decision | Reason |
 | --- | --- | --- |
-| Core agent, Telegram, cron, webhooks, memory | Keep `NousResearch/hermes-agent` already installed | These are native features. A new orchestration repo would duplicate the runtime and split `jarvis-main`. |
+| Core agent, WhatsApp, cron, webhooks, memory | Keep `NousResearch/hermes-agent` already installed | These are native features. A new orchestration repo would duplicate the runtime and split `jarvis-main`. |
 | Jarvis HUD | Keep this repository | It already owns the approved HUD, voice, STOP/barge-in, approvals, tool visualization, and SmartKlix read bridge. |
 | SmartKlix operations | Keep the CRM and existing Claude Agents repositories | They own business state, worker execution, review, and delivery. |
 | Windows computer control | Use Hermes's built-in adapter with official `trycua/cua` `cua-driver` | It supports Windows screenshots, accessibility trees, background actions, bounded capability manifests, and explicit failures. Install the released driver; do not fork or embed the whole Cua repo. |
 | Phone calls | Reuse the existing Retell/Twilio boundary | SmartKlix already receives Retell calls safely. For future owner calls, use Retell's official SDK/API through a narrow server tool. Do not enable the broad Retell MCP or direct model access to arbitrary phone calls. |
 | Gmail and Calendar | Use Google's official APIs behind narrow local tools | Hermes has a Google Workspace skill, but the current generic setup asks for broader scopes than this rollout needs. Begin with Calendar free/busy/events-read and Gmail metadata/read-only as separately authorized tools. |
-| Alerts | Use SmartKlix events/outbox plus Hermes signed webhooks and Telegram delivery | This is already sufficient. A general event-orchestration platform would add another control plane. |
+| Alerts | Use SmartKlix events/outbox plus Hermes signed webhooks and WhatsApp delivery | This is already sufficient. A general event-orchestration platform would add another control plane. |
 | Model routing | Use Hermes provider/model overrides and a small policy table | Easy scheduled/background work can pin a cheap model. Keep the live operator model replaceable. Do not add another visible agent. |
-| Second brain | Use Hermes memory, FTS5 session search, and project context first | Add semantic/vector retrieval only after a measured retrieval failure on actual SmartKlix/project documents. Do not pull Mem0, Zep, or LlamaIndex preemptively. |
+| Second brain | Pilot Hermes's native OpenViking provider against curated SmartKlix/Jarvis documents | OpenViking matches the desired file-hierarchy, tiered-loading, semantic-retrieval experience without replacing Hermes. Keep FTS5 session search and built-in memory alongside it. |
 
 No outside repository should be cloned for the first four milestones. The first
 new binary worth installing is `cua-driver`, and only when the computer-control
@@ -157,13 +157,51 @@ Classification should be deterministic first:
 | Severity | Examples | Delivery |
 | --- | --- | --- |
 | `info` | research completed, routine send receipt | store for status summaries; no interruption |
-| `attention` | approval waiting, qualified reply, recoverable worker failure | Telegram/HUD during allowed hours, deduped |
-| `urgent` | budget exhausted, repeated system failure, signed deal, payment, explicit urgent customer issue | immediate Telegram; phone escalation only under a later standing rule |
+| `attention` | approval waiting, qualified reply, recoverable worker failure | WhatsApp/HUD during allowed hours, deduped |
+| `urgent` | repeated system failure, signed deal, payment, explicit urgent customer issue | immediate WhatsApp; phone escalation only under a later standing rule |
 
 The rule engine must support deduplication, cooldowns, quiet hours, acknowledgement,
 and escalation timeout. It should not ask an LLM to classify every routine event.
 An inexpensive classifier may resolve ambiguous text only after deterministic
 rules fail, and its output cannot grant execution authority.
+
+## How real the second brain is
+
+Three memory layers already exist, but they solve different problems:
+
+| Layer | What is real today | Limit |
+| --- | --- | --- |
+| Built-in memory | Compact stable facts in `MEMORY.md` and `USER.md`, injected into each turn | Intentionally small; not a document library |
+| Session search | FTS5 search over actual Hermes messages and tool history | Keyword/full-text retrieval, not broad semantic document search |
+| Project context | Progressive loading of `.hermes.md`, `AGENTS.md`, `CLAUDE.md`, and related project instructions | Loads selected context files; it does not index every project document automatically |
+
+OpenViking is the closest match to the demonstrated file-distribution idea. The
+Hermes integration is already bundled as a memory provider. OpenViking adds:
+
+- a `viking://` hierarchy for resources, memories, and skills;
+- semantic search plus visible file/tree navigation;
+- L0 abstracts, L1 overviews, and L2 full content loaded on demand;
+- URL and document ingestion;
+- automatic memory extraction when a session is committed;
+- retrieval traces that can be inspected when the wrong file is selected.
+
+That capability is real, but it is not magic. It requires a separate OpenViking
+server, embedding/model configuration, an ingestion manifest, refresh rules,
+access boundaries, backups, and measured retrieval tests. It must not crawl the
+whole computer. Credentials, `.env` files, raw customer exports, private mailbox
+content, database dumps, generated dependencies, and archived evidence stay out
+of the index unless a later policy explicitly admits a narrow source.
+
+The first pilot should ingest only reviewed architecture, product, operating,
+and project documents from Jarvis, Smart Klix Claude Agents, and SmartKlix CRM.
+The pilot must compare OpenViking with ordinary file search and Hermes session
+search on a fixed question set. It passes only when answers identify their
+source, stale documents are detectable, deletions actually disappear, and
+retrieval is materially better than the existing tools.
+
+OpenViking is AGPL-3.0. Internal evaluation can proceed in isolation; any future
+customer packaging or hosted offering needs an explicit licensing and source-
+distribution review before it becomes part of the commercial product.
 
 ## Permission boundary
 
@@ -195,46 +233,55 @@ rules fail, and its output cannot grant execution authority.
 Acceptance: Buddy can ask the agreed operations questions and each answer either
 cites current authoritative data or explicitly names the unavailable source.
 
-### Milestone 1 - objective and budget ledger
+### Milestone 1 - controlled second-brain pilot
 
-Add a small append-only ledger tied to a Buddy objective. Store allocations,
-reservations, provider usage evidence, reconciled charges, runtime, and remaining
-budget. The ledger references existing run/task/lead IDs and does not own leads,
-proposals, approvals, or execution.
+Run OpenViking as a separate local service and connect it through Hermes's
+bundled provider. Create a reviewed ingestion manifest for a small set of Jarvis,
+Smart Klix Claude Agents, and SmartKlix CRM documents. Exclude secrets, customer
+records, generated files, dependencies, and archives. Evaluate a fixed set of
+cross-project questions against file search, session search, and OpenViking.
 
-Acceptance: `allocated = available + reserved + spent` can be reconciled, late
-provider charges are adjustments rather than rewrites, and work stops before a
-hard limit is exceeded.
+Acceptance: the provider returns source-identifiable answers, the filesystem
+hierarchy is inspectable, stale/deleted documents are handled correctly, and it
+beats existing retrieval enough to justify another local service.
 
-### Milestone 2 - Telegram remote access to the same Jarvis
+### Milestone 2 - bounded SmartKlix hands
 
-Configure one allowlisted Buddy account, establish the home channel, resume the
-actual `jarvis-main` session, and use `/handoff telegram`. Start with read-only
-SmartKlix tools. Verify voice-note transcription, text replies, TTS voice reply,
-`/stop`, restart persistence, and handoff back to the HUD/CLI.
+Create separate narrow tools for specific existing controls such as pause an
+objective, resume an already-approved objective, or start a bounded existing
+workflow. Use idempotency keys, objective limits, audit receipts, and
+server-side authorization. Do not expose generic HTTP, SQL, approval, or send.
+
+Acceptance: every command is attributable, repeat-safe, within limits, visible
+in CRM/audit history, and rejected when authority or an objective limit is absent.
+
+### Milestone 3 - WhatsApp remote access to the same Jarvis
+
+Use Hermes's existing WhatsApp integration; do not add a separate messaging
+agent. For a quick internal proof, the Baileys bridge can link an existing
+WhatsApp account without a Meta developer application, but it is unofficial,
+holds powerful linked-device credentials, and carries account-restriction risk.
+The durable business path is WhatsApp Cloud API on a dedicated business number,
+which requires Meta setup and a public signed webhook.
+
+Whichever path is chosen, allowlist only Buddy, silently ignore unauthorized
+DMs, resume the actual `jarvis-main` session, and use `/handoff whatsapp`. Start
+with read-only SmartKlix tools. Verify voice-note transcription, text replies,
+TTS voice reply, `/stop`, restart persistence, and handoff back to the HUD/CLI.
 
 Acceptance: the session ID and remembered context survive the handoff; an
-unauthorized Telegram account cannot interact with the bot.
+unauthorized WhatsApp account cannot interact with the bot; no bulk or customer
+messaging authority is enabled.
 
-### Milestone 3 - proactive alerts
+### Milestone 4 - proactive alerts
 
 Expose a signed SmartKlix event adapter to Hermes webhooks. Implement the
-deterministic severity policy, dedupe/cooldown ledger, quiet hours, and Telegram
+deterministic severity policy, dedupe/cooldown ledger, quiet hours, and WhatsApp
 delivery. Begin with synthetic events, then supervised real read-only events.
 
 Acceptance: routine events remain quiet; duplicate events do not cause duplicate
 alerts; urgent synthetic events reach Buddy once with evidence and a clear next
 decision; no event can bypass CRM approval/execution.
-
-### Milestone 4 - bounded SmartKlix hands
-
-Create separate narrow tools for specific existing controls such as pause an
-objective, resume an already-approved objective, or start a bounded existing
-workflow. Use idempotency keys, objective/budget limits, audit receipts, and
-server-side authorization. Do not expose generic HTTP, SQL, approval, or send.
-
-Acceptance: every command is attributable, repeat-safe, within limits, visible
-in CRM/audit history, and rejected when authority or budget is absent.
 
 ### Milestone 5 - Calendar and personal Gmail
 
@@ -268,12 +315,18 @@ decisions. Pin cheap models for scheduled summaries and bounded classifications;
 retain the selected main model for complex operator reasoning. Voice endpointing
 belongs in the audio pipeline, not in a second agent.
 
-### Milestone 9 - retrieval expansion
+### Milestone 9 - objective and budget ledger
 
-Index project documents only after defining ownership, freshness, deletion, and
-access rules. Evaluate semantic retrieval against real questions. Keep CRM facts
-in CRM and conversation facts in Hermes rather than copying everything into a
-new memory database.
+Defer the combined ledger until provider choices and real prices are stable
+enough to model. When that evidence exists, add a small append-only ledger tied
+to a Buddy objective. Store allocations, reservations, provider usage evidence,
+reconciled charges, runtime, and remaining budget. The ledger references existing
+run/task/lead IDs and does not own leads, proposals, approvals, or execution.
+
+Acceptance: `allocated = available + reserved + spent` can be reconciled, late
+provider charges are adjustments rather than rewrites, and work stops before a
+hard limit is exceeded. Until then, report available usage facts and label cost
+or remaining budget as unknown.
 
 ### Later bucket
 
@@ -289,19 +342,20 @@ read-only operations acceptance report covering:
 - local outreach endpoint health;
 - Jarvis MCP discovery from `jarvis-main`;
 - answers for current work, attention, leads, drafts, approvals, sends, replies,
-  failures, spend telemetry, runtime telemetry, and one lead lookup;
-- explicit gaps where cost/runtime cannot yet be proved;
+  failures, worker status, and one lead lookup;
+- existing usage facts labeled honestly, with cost/runtime gaps left for the
+  final accounting milestone;
 - regression tests for the HUD, voice, STOP, approvals, and SmartKlix snapshot.
 
-Only after that report passes should implementation move to the ledger and
-Telegram handoff.
+Only after that report passes should implementation move to the controlled
+second-brain pilot, proactive alerts, and bounded operations controls.
 
 ## Risks to carry forward
 
 1. **Hermes upgrade delta.** The installed v0.21.0 checkout is materially behind
    upstream main. Do not mix an upgrade into an integration milestone. Audit and
    test a tagged release in isolation when an upgrade is approved.
-2. **Session split.** A new Telegram conversation is not automatically
+2. **Session split.** A new WhatsApp conversation is not automatically
    `jarvis-main`. Use the supported handoff and verify the actual session ID.
 3. **False budget confidence.** Token counts are not provider-billed cost. Do not
    report a remaining budget until the ledger reconciles real charges.
@@ -316,6 +370,13 @@ Telegram handoff.
 7. **Dormant outreach bootstrap.** `npm start` in Smart Klix Claude Agents is a
    legacy autonomous path. Jarvis setup must use the documented supervised
    server and must not activate that scheduler as a shortcut.
+8. **WhatsApp transport choice.** The personal-account bridge is convenient but
+   unofficial and powerful. WhatsApp Cloud is official but needs a dedicated
+   business number, Meta configuration, a public webhook, and template rules.
+   Do not hide this tradeoff behind a generic "WhatsApp enabled" checkbox.
+9. **Knowledge indexing boundary.** A second brain can leak secrets or stale
+   business facts if ingestion is broad or deletion is incomplete. Use an
+   allowlisted manifest and keep CRM live facts in CRM.
 
 ## Research references
 
@@ -323,8 +384,14 @@ Telegram handoff.
   <https://github.com/NousResearch/hermes-agent>
 - Hermes scheduled jobs and event-triggered runs:
   <https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/cron.md>
-- Hermes Telegram gateway and voice messages:
-  <https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/messaging/telegram.md>
+- Hermes WhatsApp gateway and voice messages:
+  <https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/messaging/whatsapp.md>
+- Hermes WhatsApp Business Cloud API adapter:
+  <https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/messaging/whatsapp-cloud.md>
+- Hermes memory providers:
+  <https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers/>
+- OpenViking repository:
+  <https://github.com/volcengine/OpenViking>
 - Cua Driver repository and Windows support:
   <https://github.com/trycua/cua>
 - Retell official Python SDK:
