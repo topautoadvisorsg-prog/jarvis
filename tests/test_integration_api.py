@@ -14,6 +14,16 @@ def test_api_open_when_no_token(no_token, client):
     r = client.get("/api/usage")
     assert r.status_code == 200
     assert "llm" in r.json()
+    assert "performance" in r.json()
+
+
+def test_config_summary_exposes_model_labels_without_credentials(no_token, client):
+    response = client.get("/api/config-summary")
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(("brain", "brain_provider", "brain_model")) <= payload.keys()
+    assert "api_key" not in payload
+    assert "token" not in payload
 
 
 def test_api_401_without_token(with_token, client):

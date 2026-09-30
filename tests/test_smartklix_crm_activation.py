@@ -31,7 +31,7 @@ def test_reports_deployed_route_waiting_for_production_token():
         assert not headers
         return 503, {"code": "JARVIS_READ_NOT_CONFIGURED"}
 
-    report = build_crm_activation_report(fetch_status=fetch, now=NOW)
+    report = build_crm_activation_report(environ={}, fetch_status=fetch, now=NOW)
     assert report["status"] == "production_token_required"
     assert report["ready"] is False
     assert report["productionChanged"] is False
@@ -50,7 +50,7 @@ def test_reports_local_token_missing_after_protected_probe():
     def fetch(url, headers, timeout):
         return 401, {"code": "UNAUTHORIZED"}
 
-    report = build_crm_activation_report(fetch_status=fetch, now=NOW)
+    report = build_crm_activation_report(environ={}, fetch_status=fetch, now=NOW)
     assert report["status"] == "local_token_required"
     assert report["tokenConfiguredLocally"] is False
 
