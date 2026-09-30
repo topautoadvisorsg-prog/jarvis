@@ -96,9 +96,12 @@ isolation. See `JARVIS-BROWSER-RELIABILITY.md`.
    committed source, sanitized configuration, per-file and avatar-asset hashes,
    and exact restore instructions. Live secrets and runtime data fail closed or
    remain excluded. See `JARVIS-ROLLBACK-PACKAGE.md`.
-2. Run the full acceptance matrix after a cold Windows/WSL restart: launch,
-   text, microphone, transcription, tools, approvals, STOP, barge-in, voice,
-   memory, dashboards, and Hermes Desktop coexistence.
+2. **Automated cold-WSL acceptance complete (2026-09-30).** Two complete WSL
+   shutdowns recovered the supervised HUD, Hermes API, dashboard, and second
+   brain; the persistent session and a remembered marker survived; live text,
+   health, and browser STOP/reconnect behavior passed. Physical microphone,
+   speaker, wake/sleep, room echo/barge-in, and one full Windows reboot remain.
+   See `JARVIS-COLD-START-ACCEPTANCE.md`.
 3. Package the proven WSL supervisor as a Windows-native installed service with
    signed startup and update/rollback handling for customer deployment.
 4. Extend the deterministic browser acceptance with real microphone/speaker and
