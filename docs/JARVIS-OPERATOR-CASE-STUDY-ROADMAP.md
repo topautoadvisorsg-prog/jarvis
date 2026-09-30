@@ -1,8 +1,8 @@
 # Jarvis general operator roadmap
 
-Date: 2026-09-28
+Date: 2026-09-30
 
-Status: architecture and implementation order only. This document does not grant
+Status: architecture plus implementation tracking. This document does not grant
 new send, spend, call, approval, deployment, or computer-control authority.
 
 ## Decision
@@ -44,8 +44,10 @@ human approval, and deterministic execution remain authoritative.
 ### Jarvis/Hermes
 
 - The HUD and voice bridge use the persistent `jarvis-main` session.
-- The read-only `get_smartklix_operations` MCP tool is implemented and exposes
-  no write, approval, send, execution, or spend method.
+- The `smartklix-operations` MCP server exposes the read-only operations
+  snapshot, a deterministic attention preview, and bounded supervised research
+  console start/stop/status controls. Those controls cannot approve, send,
+  execute CRM work, or start the legacy autonomous scheduler.
 - Hermes v0.21.0 is installed locally. The upstream main branch has moved far
   beyond that release, so upgrading must be a separate compatibility project;
   this roadmap does not upgrade it.
@@ -58,10 +60,16 @@ human approval, and deterministic execution remain authoritative.
   `jarvis-main` through that flow instead of silently creating a second Jarvis
   conversation.
 - Approval mode is `manual`; cron authority is denied.
-- The Hermes gateway is currently stopped. WhatsApp and webhook credentials are
-  not configured. No cron jobs exist.
-- Computer Use is present as a Hermes tool, but `cua-driver` is not installed on
-  either Windows or WSL. It is therefore unavailable today.
+- The Hermes gateway is running and healthy. The WhatsApp pairing wizard is in
+  progress; WhatsApp remains disabled until valid credentials are written. No
+  cron jobs exist.
+- The official Windows `cua-driver` is installed and passes Hermes doctor.
+  `jarvis-main` can inspect the screen and list apps/windows through a
+  deny-by-default bounded manifest. Clicks, typing, focus, launch, clipboard,
+  recording, process control, browser mutation, and file authority are denied.
+- A separate personal Google MCP server is installed and discovers four
+  read-only Gmail/Calendar tools. OAuth remains pending, so it currently has no
+  Google account access and reports `setup_required`.
 - Local memory and FTS5 `session_search` already cover conversational recall.
   They should be used before adding a vector-memory product.
 
@@ -129,9 +137,9 @@ are not yet one reconciled business budget.
 | Model routing | Use Hermes provider/model overrides and a small policy table | Easy scheduled/background work can pin a cheap model. Keep the live operator model replaceable. Do not add another visible agent. |
 | Second brain | Pilot Hermes's native OpenViking provider against curated SmartKlix/Jarvis documents | OpenViking matches the desired file-hierarchy, tiered-loading, semantic-retrieval experience without replacing Hermes. Keep FTS5 session search and built-in memory alongside it. |
 
-No outside repository should be cloned for the first four milestones. The first
-new binary worth installing is `cua-driver`, and only when the computer-control
-milestone begins.
+No additional orchestration repository is needed. OpenViking and `cua-driver`
+were installed only for their bounded evaluation stages described below; neither
+creates another agent layer or changes SmartKlix's authority boundaries.
 
 ## Event and interruption design
 
@@ -192,12 +200,12 @@ whole computer. Credentials, `.env` files, raw customer exports, private mailbox
 content, database dumps, generated dependencies, and archived evidence stay out
 of the index unless a later policy explicitly admits a narrow source.
 
-The first pilot should ingest only reviewed architecture, product, operating,
+The completed pilot ingested only reviewed architecture, product, operating,
 and project documents from Jarvis, Smart Klix Claude Agents, and SmartKlix CRM.
-The pilot must compare OpenViking with ordinary file search and Hermes session
-search on a fixed question set. It passes only when answers identify their
-source, stale documents are detectable, deletions actually disappear, and
-retrieval is materially better than the existing tools.
+It compared OpenViking with ordinary repository search on a fixed 20-question
+set. OpenViking did not beat the baseline, so its local service and Studio remain
+available for inspection while the Hermes provider stays disabled. See
+`JARVIS-SECOND-BRAIN-IMPLEMENTATION.md`.
 
 OpenViking is AGPL-3.0. Internal evaluation can proceed in isolation; any future
 customer packaging or hosted offering needs an explicit licensing and source-
@@ -221,6 +229,10 @@ distribution review before it becomes part of the commercial product.
 
 ### Milestone 0 - activate and verify the existing eyes
 
+**Partially complete.** The adapters, source labels, failure reporting, and
+tests are implemented. The remaining blocker is deployment and live acceptance
+of the SmartKlix CRM read route with matching private tokens.
+
 1. Deploy the existing SmartKlix read-only route.
 2. Configure matching 32+ character CRM/Jarvis read tokens without exposing them
    to the browser or source control.
@@ -235,6 +247,12 @@ cites current authoritative data or explicitly names the unavailable source.
 
 ### Milestone 1 - controlled second-brain pilot
 
+**Completed but not adopted (2026-09-29).** The isolated OpenViking service,
+allowlisted manifest, indexed corpus, deletion/no-op checks, and fixed retrieval
+evaluation are complete. The provider remains disabled because OpenViking found
+the expected source in the top three for 7/20 questions versus 17/20 for the
+repository-search baseline.
+
 Run OpenViking as a separate local service and connect it through Hermes's
 bundled provider. Create a reviewed ingestion manifest for a small set of Jarvis,
 Smart Klix Claude Agents, and SmartKlix CRM documents. Exclude secrets, customer
@@ -246,6 +264,12 @@ hierarchy is inspectable, stale/deleted documents are handled correctly, and it
 beats existing retrieval enough to justify another local service.
 
 ### Milestone 2 - bounded SmartKlix hands
+
+**First bounded control complete (2026-09-30).** Jarvis can inspect, start, and
+stop only the supervised local research console with enable flags, a private
+control token, idempotency, time bounds, a watchdog, and signed local receipts.
+End-to-end start/replay/status/stop acceptance passed with sending and execution
+disabled. See `JARVIS-SMARTKLIX-BOUNDED-CONTROL.md`.
 
 Create separate narrow tools for specific existing controls such as pause an
 objective, resume an already-approved objective, or start a bounded existing
@@ -357,10 +381,10 @@ or remaining budget as unknown.
 Focus/accountability mode, camera input, gesture control, and holographic display
 work remain later features after the operator loop is reliable and measurable.
 
-## First implementation package
+## Current activation package
 
-The next code task should be only Milestone 0. Its deliverable is a live,
-read-only operations acceptance report covering:
+The remaining Milestone 0 deliverable is a live, read-only operations acceptance
+report covering:
 
 - CRM route deployment and authentication;
 - local outreach endpoint health;
@@ -371,8 +395,11 @@ read-only operations acceptance report covering:
   final accounting milestone;
 - regression tests for the HUD, voice, STOP, approvals, and SmartKlix snapshot.
 
-Only after that report passes should implementation move to the controlled
-second-brain pilot, proactive alerts, and bounded operations controls.
+The local second-brain evaluation, alert preview, bounded research-console
+control, read-only computer vision, and personal Google connector preparation
+are already complete. None of them replaces the remaining live CRM acceptance.
+WhatsApp pairing and personal Google OAuth are independent pending activation
+steps owned by Buddy's accounts.
 
 ## Risks to carry forward
 
