@@ -21,9 +21,21 @@ console-lifecycle adapter is documented in
 receives the same secret as `SMARTKLIX_JARVIS_READ_TOKEN`. URLs must use HTTPS,
 except loopback HTTP for the local Claude Agents service.
 
+## Current activation state
+
+The production route is deployed and returns `503 JARVIS_READ_NOT_CONFIGURED`
+without exposing data. A 64-character token has been generated in the protected
+local Hermes environment; its value is not stored in Git or printed by the
+preflight. The remaining action is to set that same value as
+`JARVIS_SMARTKLIX_READ_TOKEN` in the linked Vercel project and redeploy/restart
+the production function. The saved Vercel CLI identity on this computer is not
+currently authorized for that team project.
+
 ## Activation
 
-1. Deploy the CRM route from the matching SmartKlix CRM change.
+1. Confirm the deployed CRM route with the safe preflight below. The current
+   production route is live and returns `JARVIS_READ_NOT_CONFIGURED`, proving
+   deployment while refusing access until its secret exists.
 2. Generate one random token of at least 32 characters.
 3. Set `JARVIS_SMARTKLIX_READ_TOKEN` in the CRM deployment.
 4. Set `SMARTKLIX_JARVIS_READ_TOKEN` in the private Hermes environment.
@@ -33,7 +45,18 @@ except loopback HTTP for the local Claude Agents service.
 6. Restart the Jarvis/Hermes service and verify the MCP server with
    `hermes mcp test smartklix-operations`.
 
-Until the CRM route is deployed and the shared read token is configured, the
-tool returns that source as unavailable rather than guessing or fabricating
-business data. The local outreach source likewise reports unavailable when its
-approved local research server is stopped.
+The reusable preflight never changes production or prints the token:
+
+```bash
+python integrations/smartklix_crm_activation.py --env-file ~/.hermes/.env
+```
+
+It fails closed if the route is public, the tokens differ, the response grants
+write authority, or the snapshot is unavailable. Exit code `0` means the CRM
+connection is authenticated and read-only; exit code `2` means activation is
+still pending.
+
+Until the shared read token is configured, the tool returns that source as
+unavailable rather than guessing or fabricating business data. The local
+outreach source likewise reports unavailable when its approved local research
+server is stopped.
