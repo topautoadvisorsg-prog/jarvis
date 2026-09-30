@@ -5,6 +5,11 @@ separate, installable Hermes customer profile. It uses Hermes's native profile
 distribution mechanism. It does not add another agent framework, CRM, reviewer,
 database, or workflow engine.
 
+Buddy's primary Hermes installation also has the `customer-onboarding` skill.
+Buddy can describe a customer conversationally and ask Jarvis to prepare the
+package. The skill collects missing facts together, runs this same builder,
+reviews its output, and stops before installation or account authorization.
+
 ## Build a package
 
 Copy `customer-onboarding/example-handyman.yaml`, replace the business facts,
