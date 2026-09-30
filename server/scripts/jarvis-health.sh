@@ -12,6 +12,7 @@ ok(){ printf "%-22s %s\n" "$1" "$2"; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$SCRIPT_DIR/../config"
+SUPERVISOR_STATUS="$SCRIPT_DIR/../run/jarvis-supervisor.json"
 
 # --- defaults (used if no config is readable) -------------------------------
 WS_PORT=8765
@@ -139,6 +140,31 @@ for envfile in "$HOME/.hermes/.env" "$SCRIPT_DIR/../.env" "$HOME/jarvis/data/her
 done
 
 # --- checks ---------------------------------------------------------------
+if [ -r "$SUPERVISOR_STATUS" ]; then
+    SUPERVISOR_INFO="$(python3 - "$SUPERVISOR_STATUS" <<'PY' 2>/dev/null
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+    print(data.get("state", "unknown"), data.get("pid") or "")
+except Exception:
+    print("invalid", "")
+PY
+)"
+    SUPERVISOR_STATE="${SUPERVISOR_INFO%% *}"
+    SUPERVISOR_PID="${SUPERVISOR_INFO#* }"
+    case "$SUPERVISOR_STATE" in
+        running)
+            if [ -n "$SUPERVISOR_PID" ] && kill -0 "$SUPERVISOR_PID" 2>/dev/null; then
+                ok "HUD supervisor" OK
+            else
+                ok "HUD supervisor" "ATTENTION (stale status)"
+            fi ;;
+        *)       ok "HUD supervisor" "ATTENTION ($SUPERVISOR_STATE)" ;;
+    esac
+else
+    ok "HUD supervisor" "LEGACY/NOT STARTED"
+fi
+
 curl -s  -m 3 "http://127.0.0.1:${WS_PORT}/docs" -o /dev/null \
     && ok "voice ws (${WS_PORT})" OK || ok "voice ws (${WS_PORT})" DOWN
 

@@ -80,13 +80,19 @@ Approved Git checkpoint before the final size increase: `c6bed57`.
 
 ### P0 — Freeze and harden the working local system
 
+**WSL supervision first stage complete (2026-09-30).** The HUD launcher now
+runs through a bounded supervisor with atomic status, capped restart attempts,
+incremental backoff, local log rotation, a 30-second startup health gate, and a
+clear terminal failure message. A Windows-native installer/service remains part
+of commercial packaging.
+
 1. Tag the approved checkpoint and keep a rollback package containing source,
    sanitized config templates, asset hashes, and restore instructions.
 2. Run the full acceptance matrix after a cold Windows/WSL restart: launch,
    text, microphone, transcription, tools, approvals, STOP, barge-in, voice,
    memory, dashboards, and Hermes Desktop coexistence.
-3. Convert startup into a supervised Windows/WSL service with health checks,
-   bounded restart policy, log rotation, and a visible failure message.
+3. Package the proven WSL supervisor as a Windows-native installed service with
+   signed startup and update/rollback handling for customer deployment.
 4. Add browser end-to-end tests for the WebSocket state machine, stale audio,
    double playback, STOP during LLM/tool/TTS phases, and reconnect recovery.
 5. Record latency and cost budgets for STT, Hermes, tools, and TTS. Alert on
