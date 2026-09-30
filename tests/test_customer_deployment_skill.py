@@ -4,7 +4,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILL = ROOT / "hermes-plugin" / "customer-onboarding" / "SKILL.md"
+SKILL = ROOT / "hermes-plugin" / "customer-deployment" / "SKILL.md"
 
 
 def skill_parts():
@@ -16,7 +16,7 @@ def skill_parts():
 
 def test_skill_has_valid_identity_and_trigger():
     meta, body = skill_parts()
-    assert meta["name"] == "customer-onboarding"
+    assert meta["name"] == "customer-deployment"
     assert "new customer" in meta["description"].lower()
     assert "build-customer-package.py" in body
 

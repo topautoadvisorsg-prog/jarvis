@@ -149,7 +149,7 @@ server/scripts/  start/stop/health/smoke + cert & boot-audio generators
 client/          optional Windows/Linux push-to-talk Python client (wake word capable)
 worker/          optional GPU sidecars: big-model STT server + stats agent for the Machines panel
 hermes-plugin/   Hermes tool plugin: lets the agent summon/dismiss HUD media panels
-customer-onboarding/ reviewed input templates for separate customer profiles
+customer-deployment/ reviewed input templates for separate customer profiles
 scripts/         customer package builder and integration setup helpers
 launchd/         macOS auto-start templates with hard-won TCC + FD-limit notes
 docs/            SETUP, ARCHITECTURE (protocols/endpoints), TROUBLESHOOTING
@@ -157,7 +157,7 @@ docs/            SETUP, ARCHITECTURE (protocols/endpoints), TROUBLESHOOTING
 
 To prepare a separate customer installation without copying private runtime
 state, use the native Hermes distribution builder documented in
-[docs/CUSTOMER-ONBOARDING-PACKAGE.md](docs/CUSTOMER-ONBOARDING-PACKAGE.md).
+[docs/CUSTOMER-DEPLOYMENT-PACKAGE.md](docs/CUSTOMER-DEPLOYMENT-PACKAGE.md).
 
 ## Security model
 

@@ -1,23 +1,23 @@
-# Customer onboarding package
+# Customer deployment package
 
 This is the smallest reusable path from a reviewed business profile to a
 separate, installable Hermes customer profile. It uses Hermes's native profile
 distribution mechanism. It does not add another agent framework, CRM, reviewer,
 database, or workflow engine.
 
-Buddy's primary Hermes installation also has the `customer-onboarding` skill.
+Buddy's primary Hermes installation also has the `customer-deployment` skill.
 Buddy can describe a customer conversationally and ask Jarvis to prepare the
 package. The skill collects missing facts together, runs this same builder,
 reviews its output, and stops before installation or account authorization.
 
 ## Build a package
 
-Copy `customer-onboarding/example-handyman.yaml`, replace the business facts,
+Copy `customer-deployment/example-handyman.yaml`, replace the business facts,
 and run:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/build-customer-package.py `
-  customer-onboarding/my-customer.yaml `
+  customer-deployment/my-customer.yaml `
   build/my-customer
 ```
 

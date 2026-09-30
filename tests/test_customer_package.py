@@ -15,7 +15,7 @@ SPEC.loader.exec_module(module)
 
 
 def example_data():
-    return yaml.safe_load((ROOT / "customer-onboarding" / "example-handyman.yaml").read_text(encoding="utf-8"))
+    return yaml.safe_load((ROOT / "customer-deployment" / "example-handyman.yaml").read_text(encoding="utf-8"))
 
 
 def write_spec(tmp_path, data):
@@ -25,7 +25,7 @@ def write_spec(tmp_path, data):
 
 
 def test_example_builds_installable_secret_free_distribution(tmp_path):
-    spec = module.load_spec(ROOT / "customer-onboarding" / "example-handyman.yaml")
+    spec = module.load_spec(ROOT / "customer-deployment" / "example-handyman.yaml")
     output = module.write_package(spec, tmp_path / "package")
 
     expected = {
@@ -43,7 +43,7 @@ def test_example_builds_installable_secret_free_distribution(tmp_path):
 
 
 def test_build_is_deterministic(tmp_path):
-    spec = module.load_spec(ROOT / "customer-onboarding" / "example-handyman.yaml")
+    spec = module.load_spec(ROOT / "customer-deployment" / "example-handyman.yaml")
     first = module.write_package(spec, tmp_path / "one")
     second = module.write_package(spec, tmp_path / "two")
     assert (first / "PACKAGE-MANIFEST.json").read_bytes() == (second / "PACKAGE-MANIFEST.json").read_bytes()
@@ -97,7 +97,7 @@ def test_smartklix_selection_adds_requirements_and_boundary(tmp_path):
 
 
 def test_package_manifest_hashes_generated_files(tmp_path):
-    spec = module.load_spec(ROOT / "customer-onboarding" / "example-handyman.yaml")
+    spec = module.load_spec(ROOT / "customer-deployment" / "example-handyman.yaml")
     output = module.write_package(spec, tmp_path / "package")
     manifest = json.loads((output / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
     assert manifest["customer_id"] == "northstar-handyman"

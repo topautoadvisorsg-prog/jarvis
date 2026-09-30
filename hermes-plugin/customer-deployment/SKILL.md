@@ -1,15 +1,15 @@
 ---
-name: customer-onboarding
-description: Prepare a separate, secret-free Hermes customer pilot package from plain business information. Use when Buddy asks to onboard, set up, package, or prepare a new customer.
+name: customer-deployment
+description: Prepare a separate, secret-free Hermes customer pilot package from plain business information. Use when Buddy asks to set up, package, or prepare a new customer deployment.
 version: 0.1.0
 author: Smart Klix
 license: Proprietary
 metadata:
   hermes:
-    tags: [customers, onboarding, deployment]
+    tags: [customers, profiles, deployment]
 ---
 
-# Customer onboarding
+# Customer deployment
 
 ## Purpose
 
@@ -21,9 +21,9 @@ install a profile, connect an account, copy credentials, or grant authority.
 
 Use the checked-in schema and builder from the Jarvis source repository:
 
-- `customer-onboarding/example-handyman.yaml`
+- `customer-deployment/example-handyman.yaml`
 - `scripts/build-customer-package.py`
-- `docs/CUSTOMER-ONBOARDING-PACKAGE.md`
+- `docs/CUSTOMER-DEPLOYMENT-PACKAGE.md`
 
 For Buddy's current machine, the authoritative checkout is:
 
