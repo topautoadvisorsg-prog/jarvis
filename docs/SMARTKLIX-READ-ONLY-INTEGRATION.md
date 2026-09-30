@@ -1,7 +1,7 @@
 # SmartKlix read-only operations integration
 
 `jarvis-main` remains the Hermes Operations Manager role. This integration adds
-one MCP tool, `get_smartklix_operations`, and no additional agent or manager.
+the `get_smartklix_operations` MCP tool and no additional agent or manager.
 
 The tool reads three existing sources:
 
@@ -11,8 +11,10 @@ The tool reads three existing sources:
   analytics, and estimated model usage.
 - Jarvis HUD: local cumulative LLM/TTS usage counters.
 
-It cannot start or pause work, approve, execute, send, spend, retry, or mutate
-anything. The CRM uses a dedicated `JARVIS_SMARTKLIX_READ_TOKEN`; the MCP side
+The operations snapshot cannot start or pause work, approve, execute, send,
+spend, retry, or mutate anything. A separate bounded console-lifecycle adapter
+is documented in `JARVIS-SMARTKLIX-BOUNDED-CONTROL.md`. The CRM uses a dedicated
+`JARVIS_SMARTKLIX_READ_TOKEN`; the MCP side
 receives the same secret as `SMARTKLIX_JARVIS_READ_TOKEN`. URLs must use HTTPS,
 except loopback HTTP for the local Claude Agents service.
 
