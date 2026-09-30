@@ -86,6 +86,11 @@ incremental backoff, local log rotation, a 30-second startup health gate, and a
 clear terminal failure message. A Windows-native installer/service remains part
 of commercial packaging.
 
+**Browser reliability first stage complete (2026-09-30).** A repeatable real
+Chromium acceptance now covers STOP during thinking/tool/speech, duplicate
+playback prevention, late audio rejection, reconnect recovery, and stale-socket
+isolation. See `JARVIS-BROWSER-RELIABILITY.md`.
+
 1. Tag the approved checkpoint and keep a rollback package containing source,
    sanitized config templates, asset hashes, and restore instructions.
 2. Run the full acceptance matrix after a cold Windows/WSL restart: launch,
@@ -93,8 +98,8 @@ of commercial packaging.
    memory, dashboards, and Hermes Desktop coexistence.
 3. Package the proven WSL supervisor as a Windows-native installed service with
    signed startup and update/rollback handling for customer deployment.
-4. Add browser end-to-end tests for the WebSocket state machine, stale audio,
-   double playback, STOP during LLM/tool/TTS phases, and reconnect recovery.
+4. Extend the deterministic browser acceptance with real microphone/speaker and
+   network-fault runs on the customer hardware profile.
 5. Record latency and cost budgets for STT, Hermes, tools, and TTS. Alert on
    regressions rather than relying on subjective testing.
 
