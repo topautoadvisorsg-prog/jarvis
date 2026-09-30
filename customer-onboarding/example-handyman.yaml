@@ -1,0 +1,40 @@
+schema_version: 1
+
+customer:
+  id: northstar-handyman
+  business_name: Northstar Handyman Services
+  owner_name: Alex
+  assistant_name: Jarvis
+  timezone: America/Los_Angeles
+
+business:
+  summary: Residential handyman service focused on reliable small repairs and maintenance.
+  services:
+    - Drywall repair
+    - Fixture installation
+    - Door and cabinet repair
+    - Minor plumbing repairs
+  service_areas:
+    - North County
+    - Central County
+  business_hours: Monday through Friday, 8:00 AM to 5:00 PM
+  primary_outcomes:
+    - Keep new inquiries organized
+    - Surface estimates and appointments needing the owner's attention
+    - Reduce time spent checking separate systems
+
+operations:
+  crm: none
+  outreach_agents: none
+  whatsapp: false
+  personal_google_readonly: false
+
+authority:
+  read_without_approval:
+    - Read explicitly connected business calendars and job records
+    - Research public information needed to answer the owner's question
+  always_require_approval:
+    - Confirm or change a customer appointment
+    - Send a quote or accept a job
+  prohibited:
+    - Represent a price as final when the owner has not approved it

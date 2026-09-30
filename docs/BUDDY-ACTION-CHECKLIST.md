@@ -33,5 +33,8 @@ not block local Jarvis engineering.
   customer-facing deployment.
 - [ ] Select the first customer pilot workflow after the local operator loop is
   accepted.
+- [ ] Fill in a copy of `customer-onboarding/example-handyman.yaml` for the
+  first customer pilot and review the generated approval boundaries before
+  installation.
 - [ ] Select and license the commercial voice and final avatar assets before
   commercial distribution.

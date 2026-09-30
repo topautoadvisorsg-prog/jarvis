@@ -26,6 +26,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+/build/
 
 # os
 .DS_Store
