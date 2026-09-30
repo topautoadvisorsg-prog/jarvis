@@ -41,6 +41,12 @@ credentials.
 macOS continues to use the existing launchd services. Windows-native service
 packaging remains a later commercial-distribution task.
 
+The Windows desktop `JARVIS HUD` shortcut now invokes the tracked
+`windows/Start-Jarvis-HUD.ps1` launcher. That launcher calls the same
+`server/scripts/jarvis-start.sh` path instead of starting `server.py` directly,
+then restores the loopback Hermes dashboard if needed. This keeps shortcut and
+terminal startup on the same supervised runtime path.
+
 ## Acceptance evidence
 
 The supervisor was checked with an isolated process that exited immediately:
