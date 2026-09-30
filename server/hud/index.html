@@ -331,7 +331,7 @@ footer{
         <button class="btn danger" id="stopBtn">■ STOP</button>
       </div>
     </div>
-    <div class="panel"><h2><span>AGENT ACTIVITY</span><span class="num">02</span></h2>
+    <div class="panel"><h2><span>AUDIT TIMELINE</span><span class="num">02</span></h2>
       <div id="activity"><div>— no activity yet —</div></div>
     </div>
     <div class="panel"><h2><span>TURN METRICS</span><span class="num">03</span></h2>
@@ -576,6 +576,35 @@ function addActivity(text,toolName,preview){
   const esc=s=>String(s||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
   d.innerHTML=toolName?`▸ tool <b>${esc(toolName)}</b> <span style="opacity:.7">${esc((preview||"").slice(0,60))}</span>`:`▸ ${esc(text)}`;
   a.prepend(d); while(a.children.length>40)a.removeChild(a.lastChild);
+}
+function auditSummary(row){
+  const event=String(row.event||"event");
+  if(event==="request.accepted")return `${row.channel||"request"}: ${row.request_preview||"accepted"}`;
+  if(event==="run.started")return `run started · ${row.provider||"brain"}/${row.model||"model"}`;
+  if(event==="tool.started")return `tool ${row.tool||"tool"} · ${row.input_preview||"started"}`;
+  if(event==="tool.completed")return `tool ${row.tool||"tool"} · ${row.output_preview||"completed"}`;
+  if(event==="approval.requested")return `approval required · ${row.request_preview||row.request_id||"pending"}`;
+  if(event==="approval.decided")return `approval ${row.decision||"decided"} · HTTP ${row.status_code??"—"}`;
+  if(event==="cancellation.requested")return "STOP requested";
+  if(event==="turn.cancelled")return "turn cancelled";
+  if(event==="turn.failed")return `failed · ${row.error_type||row.status||"unknown"}`;
+  if(event==="turn.completed")return `completed · ${row.result_preview||"no text result"}`;
+  return event;
+}
+async function refreshAudit(){
+  try{
+    const r=await fetch("/api/audit?limit=30"); if(!r.ok)throw new Error(r.status);
+    const j=await r.json(), rows=Array.isArray(j.events)?j.events:[];
+    if(!rows.length)return;
+    const a=$("activity"); a.innerHTML="";
+    rows.forEach(row=>{
+      const d=document.createElement("div");
+      const when=row.ts?new Date(row.ts).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}):"--:--:--";
+      d.textContent=`${when} ▸ ${auditSummary(row)}`;
+      d.title=`${row.event||"event"}${row.run_id?" · "+row.run_id:""}`;
+      a.appendChild(d);
+    });
+  }catch{}
 }
 
 /* live partial transcript bubble */
@@ -1162,11 +1191,11 @@ async function refreshWeather(){
     $("wxWind").textContent=cur.wind_speed_10m!=null?Math.round(cur.wind_speed_10m)+" km/h":"—";
   }catch{ if(WX_CFG){ $("wxTemp").textContent="—"; $("wxCond").textContent="offline"; $("wxWind").textContent="—"; } }
 }
-refreshHealth();refreshSkills();refreshJobs();refreshMachines();refreshUsage();refreshModels();refreshWeather();
+refreshHealth();refreshSkills();refreshJobs();refreshMachines();refreshUsage();refreshModels();refreshWeather();refreshAudit();
 setInterval(refreshUsage,60000);
 setInterval(refreshWeather,900000);
 setInterval(refreshHealth,15000); setInterval(refreshJobs,60000); setInterval(refreshMachines,10000);
-setInterval(refreshSkills,120000);
+setInterval(refreshSkills,120000); setInterval(refreshAudit,5000);
 
 /* ====================== earcons (UI sound cues) ==================== */
 // Short synthesized tones for key events. WebAudio only (no assets, CSP-safe);

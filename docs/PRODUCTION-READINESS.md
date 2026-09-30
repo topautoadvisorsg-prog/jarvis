@@ -124,8 +124,10 @@ isolation. See `JARVIS-BROWSER-RELIABILITY.md`.
    business-system agnostic.
 3. Build role-scoped business panels from live tool events and APIs; do not
    hard-code decorative fake metrics.
-4. Add an audit timeline showing request, model, tool inputs/outputs, approval,
-   cancellation, and final result with sensitive-field redaction.
+4. **Local audit timeline first stage complete (2026-09-30).** Requests, model,
+   tool input/output previews, approvals, cancellation, failures, and results
+   are recorded with pre-write credential redaction and shown in the existing
+   HUD activity panel. See `JARVIS-AUDIT-TIMELINE.md`.
 5. Add escalation and human handoff for failures, ambiguous requests, and
    actions that cannot safely complete unattended.
 
