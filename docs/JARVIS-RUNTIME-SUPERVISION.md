@@ -47,6 +47,13 @@ The Windows desktop `JARVIS HUD` shortcut now invokes the tracked
 then restores the loopback Hermes dashboard if needed. This keeps shortcut and
 terminal startup on the same supervised runtime path.
 
+Cold-start acceptance found that the HUD could become ready a few seconds before
+the Hermes API completed startup. The repository launcher now starts a gateway
+only when port 8642 is not already listening and waits up to 60 seconds for the
+Hermes health response before starting or reporting the HUD ready. Reopening the
+desktop shortcut therefore does not restart an already-running gateway because
+of one early HTTP probe.
+
 ## Acceptance evidence
 
 The supervisor was checked with an isolated process that exited immediately:

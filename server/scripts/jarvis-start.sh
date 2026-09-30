@@ -19,9 +19,25 @@ else
     "$SERVER_DIR/scripts/openviking-start.sh" --background || \
       echo "warning: OpenViking did not start; Jarvis will continue without it" >&2
   fi
-  if ! curl -fsS http://127.0.0.1:8642/health >/dev/null 2>&1; then
+  # A healthy gateway may require time to finish loading after its port opens.
+  # Do not kill an existing/warming gateway merely because one HTTP probe was
+  # early; only create the tmux service when nothing is listening on 8642.
+  if ! ss -ltn 2>/dev/null | grep -q ':8642 '; then
     tmux kill-session -t hermes-gateway 2>/dev/null || true
     tmux new-session -d -s hermes-gateway "exec hermes gateway run"
+  fi
+  gateway_healthy=0
+  for _ in $(seq 1 60); do
+    if curl -fsS http://127.0.0.1:8642/health 2>/dev/null | grep -q '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+      gateway_healthy=1
+      break
+    fi
+    sleep 1
+  done
+  if [ "$gateway_healthy" -ne 1 ]; then
+    echo "Hermes API did not become healthy within 60 seconds." >&2
+    echo "Inspect $HOME/.hermes/logs/jarvis-gateway.log locally for details." >&2
+    exit 1
   fi
   if ! curl -fsS http://127.0.0.1:8765/api/config-summary >/dev/null 2>&1; then
     tmux kill-session -t jarvis-hud 2>/dev/null || true
