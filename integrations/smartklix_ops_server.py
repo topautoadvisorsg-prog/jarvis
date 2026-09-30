@@ -52,13 +52,16 @@ def get_smartklix_attention(hours: int = 24) -> str:
             str(Path.home() / ".hermes" / "smartklix-alerts" / "ledger.json"),
         )
     ).expanduser()
-    preview = AlertLedger(
+    ledger = AlertLedger(
         state_path,
         timezone_name=os.environ.get("SMARTKLIX_ALERT_TIMEZONE", "America/Tijuana"),
-    ).evaluate(events, record=False)
+    )
+    observation = ledger.observe(events)
+    preview = ledger.evaluate(events, record=False)
+    handoffs = ledger.build_handoffs(events)
     return json.dumps(
         {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "generatedAt": snapshot["generatedAt"],
             "authority": {
                 "readOnly": True,
@@ -70,6 +73,8 @@ def get_smartklix_attention(hours: int = 24) -> str:
             },
             "events": events,
             "deliveryPreview": preview,
+            "handoffs": handoffs,
+            "observation": observation,
         },
         indent=2,
     )

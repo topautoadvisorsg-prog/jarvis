@@ -134,3 +134,54 @@ def test_quiet_hours_hold_attention_but_not_urgent(tmp_path: Path):
 
     assert result["deliverable"] == [urgent]
     assert result["suppressed"][0]["suppressedReason"] == "quiet_hours"
+
+
+def test_observation_builds_persistent_handoff_without_storing_facts(tmp_path: Path):
+    event = next(event for event in build_attention_events(_snapshot()) if event["requiresBuddy"])
+    path = tmp_path / "ledger.json"
+    ledger = AlertLedger(path, timezone_info=timezone.utc)
+
+    ledger.observe([event], now=NOW)
+    handoffs = ledger.build_handoffs([event], now=NOW + timedelta(hours=3))
+    stored = path.read_text(encoding="utf-8")
+
+    assert len(handoffs) == 1
+    assert handoffs[0]["priority"] == "urgent"
+    assert handoffs[0]["overdue"] is True
+    assert handoffs[0]["recommendedAction"]
+    assert handoffs[0]["firstSeenAt"] == NOW.isoformat().replace("+00:00", "Z")
+    assert "facts" not in stored
+    assert "summary" not in stored
+
+
+def test_acknowledged_handoff_leaves_history_but_suppresses_delivery(tmp_path: Path):
+    event = next(event for event in build_attention_events(_snapshot()) if event["requiresBuddy"])
+    ledger = AlertLedger(
+        tmp_path / "ledger.json",
+        timezone_info=timezone.utc,
+        quiet_start_hour=0,
+        quiet_end_hour=0,
+    )
+    ledger.observe([event], now=NOW)
+    receipt = ledger.acknowledge(
+        event["dedupeKey"], acknowledged_by="Buddy", now=NOW,
+    )
+
+    assert receipt["acknowledgedBy"] == "Buddy"
+    assert ledger.build_handoffs([event], now=NOW) == []
+    result = ledger.evaluate([event], now=NOW, record=False)
+    assert result["deliverable"] == []
+    assert result["suppressed"][0]["suppressedReason"] == "acknowledged"
+
+
+def test_resolved_event_reopens_as_a_new_incident(tmp_path: Path):
+    event = next(event for event in build_attention_events(_snapshot()) if event["requiresBuddy"])
+    ledger = AlertLedger(tmp_path / "ledger.json", timezone_info=timezone.utc)
+    ledger.observe([event], now=NOW)
+    ledger.acknowledge(event["dedupeKey"], acknowledged_by="Buddy", now=NOW)
+    ledger.observe([], now=NOW + timedelta(minutes=5))
+    ledger.observe([event], now=NOW + timedelta(hours=1))
+
+    handoff = ledger.build_handoffs([event], now=NOW + timedelta(hours=1))[0]
+    assert handoff["firstSeenAt"] == (NOW + timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+    assert handoff["overdue"] is False

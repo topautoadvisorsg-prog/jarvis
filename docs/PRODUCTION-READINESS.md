@@ -128,8 +128,11 @@ isolation. See `JARVIS-BROWSER-RELIABILITY.md`.
    tool input/output previews, approvals, cancellation, failures, and results
    are recorded with pre-write credential redaction and shown in the existing
    HUD activity panel. See `JARVIS-AUDIT-TIMELINE.md`.
-5. Add escalation and human handoff for failures, ambiguous requests, and
-   actions that cannot safely complete unattended.
+5. **SmartKlix handoff first stage complete (2026-09-30).** Existing failures,
+   approvals, replies, and blocked work now receive persistent first-seen,
+   escalation, resolution/reopen, and deterministic recommended-action state.
+   A structured signal for genuinely ambiguous Jarvis requests and reviewed
+   acknowledgement/delivery interfaces remain before this item is complete.
 
 ### P3 — Voice and avatar refinement
 

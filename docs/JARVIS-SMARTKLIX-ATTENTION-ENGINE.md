@@ -2,8 +2,9 @@
 
 Date: 2026-09-30
 
-Status: deterministic read-only preview implemented; external delivery is
-disabled until WhatsApp is paired and live source data is verified.
+Status: deterministic classification plus durable local handoff state is
+implemented; external delivery is disabled until WhatsApp is paired and live
+source data is verified.
 
 ## Purpose
 
@@ -51,17 +52,35 @@ Classification uses stored statuses and counts only. Missing sources produce an
 explicit availability event; the engine never fabricates leads, replies,
 failures, cost, or revenue.
 
+## Local handoff state
+
+Each read records only event identity, type, severity, first/last seen time,
+and resolution/acknowledgement timestamps in the existing alert ledger. It does
+not copy event facts, lead data, proposal details, messages, or customer data.
+
+The tool returns a `handoffs` queue with stable identifiers, first-seen and
+two-hour escalation timestamps, `attention` or overdue `urgent` priority, and a
+deterministic recommended action. Current facts still come directly from the
+authoritative snapshot.
+
+When an event disappears from the snapshot, its local incident is marked
+resolved. If the same condition returns later, it opens as a new incident with
+a new first-seen time. The ledger supports local acknowledgement, but no Hermes
+acknowledgement tool is exposed yet, so an agent cannot silently hide an item
+without a separately reviewed interface.
+
 ## Delivery policy boundary
 
 The local policy supports stable deduplication, a six-hour cooldown, and quiet
 hours from 9:00 PM to 8:00 AM in `America/Tijuana`. Urgent events may bypass
-quiet hours. Tests exercise recording and replay, but the MCP tool calls the
-policy in preview mode and never records a notification as delivered.
+quiet hours. The MCP tool records observation timing for handoff/escalation but
+calls delivery policy in preview mode and never records a notification as
+delivered.
 
 Current authority is:
 
 ```text
-read operations snapshot -> classify -> preview
+read operations snapshot -> classify -> record local observation -> preview handoff/delivery
 ```
 
 It cannot send WhatsApp messages, start work, approve, execute, mutate CRM, or

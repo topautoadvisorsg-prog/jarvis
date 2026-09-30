@@ -26,6 +26,18 @@ BLOCKED_PROPOSAL_STATES = {
 PENDING_PROPOSAL_STATES = {"pending", "review_complete", "needs_review"}
 ACTIVE_PROPOSAL_STATES = {"approved", "queued", "processing"}
 FAILURE_STATES = {"failed", "error", "dispatch_failed", "undelivered", "bounced"}
+HANDOFF_ACTIONS = {
+    "approval.pending": "review_approval",
+    "workflow.blocked": "inspect_blocked_work",
+    "control.kill_switch_active": "review_kill_switch",
+    "reply.received": "review_reply",
+    "execution.failed": "inspect_execution_failure",
+    "intake.needs_review": "review_intake",
+    "source.unavailable": "restore_visibility",
+    "source.partial_failure": "inspect_read_failure",
+    "research.failed": "inspect_research_failure",
+    "worker.exception": "inspect_worker_failure",
+}
 
 
 def _mapping(value: Any) -> dict[str, Any]:
@@ -290,6 +302,143 @@ class AlertLedger:
         except (FileNotFoundError, OSError, json.JSONDecodeError):
             return {}
 
+    def _save(self, ledger: dict[str, Any]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_suffix(self.path.suffix + ".tmp")
+        temporary.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
+        try:
+            temporary.chmod(0o600)
+        except OSError:
+            pass
+        temporary.replace(self.path)
+
+    @staticmethod
+    def _utc(now: datetime | None = None) -> datetime:
+        current = now or datetime.now(timezone.utc)
+        if current.tzinfo is None:
+            current = current.replace(tzinfo=timezone.utc)
+        return current.astimezone(timezone.utc)
+
+    @staticmethod
+    def _iso(value: datetime) -> str:
+        return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    @staticmethod
+    def _parse_time(value: Any, fallback: datetime) -> datetime:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return fallback
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    def observe(
+        self,
+        events: Iterable[dict[str, Any]],
+        *,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Persist correlation/timing only; never store event facts or deliver."""
+        current = self._utc(now)
+        current_iso = self._iso(current)
+        ledger = self._load()
+        observed = 0
+        changed = False
+        active_keys: set[str] = set()
+        for event in events:
+            if not event.get("requiresBuddy"):
+                continue
+            key = str(event.get("dedupeKey") or event.get("eventId") or "")
+            if not key:
+                continue
+            active_keys.add(key)
+            previous = _mapping(ledger.get(key))
+            if previous.get("resolvedAt"):
+                previous = {}
+            ledger[key] = {
+                **previous,
+                "eventId": event.get("eventId"),
+                "eventType": event.get("type"),
+                "severity": event.get("severity"),
+                "firstSeenAt": previous.get("firstSeenAt") or current_iso,
+                "lastSeenAt": current_iso,
+            }
+            observed += 1
+            changed = True
+        for key, value in list(ledger.items()):
+            state = _mapping(value)
+            if key not in active_keys and state.get("firstSeenAt") and not state.get("resolvedAt"):
+                ledger[key] = {**state, "resolvedAt": current_iso}
+                changed = True
+        if changed:
+            self._save(ledger)
+        return {"observed": observed, "recordedAt": current_iso}
+
+    def build_handoffs(
+        self,
+        events: Iterable[dict[str, Any]],
+        *,
+        now: datetime | None = None,
+        escalation_after: timedelta = timedelta(hours=2),
+    ) -> list[dict[str, Any]]:
+        """Build a deterministic Buddy handoff queue from already-classified events."""
+        current = self._utc(now)
+        ledger = self._load()
+        handoffs: list[dict[str, Any]] = []
+        for event in events:
+            if not event.get("requiresBuddy"):
+                continue
+            key = str(event.get("dedupeKey") or event.get("eventId") or "")
+            state = _mapping(ledger.get(key))
+            if state.get("acknowledgedAt"):
+                continue
+            first_seen = self._parse_time(
+                state.get("firstSeenAt") or event.get("occurredAt"), current,
+            )
+            deadline = first_seen + escalation_after
+            overdue = current >= deadline
+            event_type = str(event.get("type") or "attention.required")
+            handoffs.append({
+                "handoffId": str(event.get("eventId") or key),
+                "dedupeKey": key,
+                "eventType": event_type,
+                "subject": event.get("subject") or {},
+                "source": event.get("source"),
+                "priority": "urgent" if event.get("severity") == "urgent" or overdue else "attention",
+                "requiresBuddy": True,
+                "recommendedAction": HANDOFF_ACTIONS.get(event_type, "review_attention_item"),
+                "firstSeenAt": self._iso(first_seen),
+                "escalateAt": self._iso(deadline),
+                "overdue": overdue,
+                "facts": event.get("facts") or {},
+            })
+        return sorted(
+            handoffs,
+            key=lambda item: (0 if item["priority"] == "urgent" else 1, item["firstSeenAt"], item["dedupeKey"]),
+        )
+
+    def acknowledge(
+        self,
+        dedupe_key: str,
+        *,
+        acknowledged_by: str,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Record a local acknowledgement without changing SmartKlix state."""
+        ledger = self._load()
+        current = self._utc(now)
+        state = _mapping(ledger.get(dedupe_key))
+        if not state:
+            raise KeyError("unknown handoff")
+        state.update({
+            "acknowledgedAt": self._iso(current),
+            "acknowledgedBy": str(acknowledged_by)[:80],
+        })
+        ledger[dedupe_key] = state
+        self._save(ledger)
+        return {"dedupeKey": dedupe_key, **state}
+
     def _in_quiet_hours(self, now: datetime) -> bool:
         hour = now.astimezone(self.timezone).hour
         if self.quiet_start_hour == self.quiet_end_hour:
@@ -305,9 +454,7 @@ class AlertLedger:
         now: datetime | None = None,
         record: bool = False,
     ) -> dict[str, list[dict[str, Any]]]:
-        current = now or datetime.now(timezone.utc)
-        if current.tzinfo is None:
-            current = current.replace(tzinfo=timezone.utc)
+        current = self._utc(now)
         ledger = self._load()
         deliverable: list[dict[str, Any]] = []
         suppressed: list[dict[str, Any]] = []
@@ -317,7 +464,11 @@ class AlertLedger:
                 continue
             key = str(event.get("dedupeKey") or event.get("eventId"))
             reason = None
-            previous = _mapping(ledger.get(key)).get("lastDeliveredAt")
+            state = _mapping(ledger.get(key))
+            if state.get("acknowledgedAt"):
+                suppressed.append({**event, "suppressedReason": "acknowledged"})
+                continue
+            previous = state.get("lastDeliveredAt")
             if previous:
                 try:
                     last = datetime.fromisoformat(str(previous).replace("Z", "+00:00"))
@@ -333,17 +484,11 @@ class AlertLedger:
             deliverable.append(event)
             if record:
                 ledger[key] = {
+                    **state,
                     "eventId": event.get("eventId"),
-                    "lastDeliveredAt": current.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    "lastDeliveredAt": self._iso(current),
                 }
 
         if record and deliverable:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            temporary = self.path.with_suffix(self.path.suffix + ".tmp")
-            temporary.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
-            try:
-                temporary.chmod(0o600)
-            except OSError:
-                pass
-            temporary.replace(self.path)
+            self._save(ledger)
         return {"deliverable": deliverable, "suppressed": suppressed}
