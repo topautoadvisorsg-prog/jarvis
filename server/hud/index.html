@@ -383,6 +383,7 @@ footer{
       <div class="kv"><span>Turns today</span><b id="uTurns">—</b></div>
       <div class="kv"><span>Median response</span><b id="uLatency">—</b></div>
       <div class="kv"><span>Successful turns</span><b id="uSuccess">—</b></div>
+      <div class="kv"><span>Performance health</span><b id="uHealth">WARMING UP</b></div>
       <div class="kv"><span>Voice usage</span><b id="uTts">—</b></div>
       <div class="bar"><i id="ttsBar"></i></div>
     </div>
@@ -1119,6 +1120,13 @@ async function refreshUsage(){
     $("uSuccess").textContent=p.success_rate_pct!=null
       ? `${p.success_rate_pct.toFixed(0)}% (${p.successful_turns||0}/${p.sample_count||0})`
       : "—";
+    const ph=j.performance_health||{};
+    const healthLabel=ph.status==="healthy"?"HEALTHY":ph.status==="degraded"?"DEGRADED":"WARMING UP";
+    $("uHealth").textContent=healthLabel;
+    $("uHealth").className=ph.status==="healthy"?"ok":ph.status==="degraded"?"err":"warn";
+    $("uHealth").title=ph.status==="degraded"
+      ? (ph.regressions||[]).map(x=>`${x.metric} ${x.value} ${x.operator} ${x.threshold}`).join(" · ")
+      : `Needs ${ph.min_samples||5} measured samples per check`;
     if(j.llm?.today_cost!=null){$("uCostRow").style.display="flex";$("uCost").textContent="$"+j.llm.today_cost.toFixed(2)}
     const e=j.elevenlabs;
     if(e&&e.limit){

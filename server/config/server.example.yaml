@@ -61,6 +61,13 @@ usage:
   # Your LLM provider's pricing ($ per 1M tokens) for HUD cost estimates. 0 = token counts only.
   llm_cost_per_mtok_input: 0
   llm_cost_per_mtok_output: 0
+  # Initial local regression guardrails, not a customer SLA or provider bill.
+  # Intentional STOP/barge-in turns do not count as reliability failures.
+  performance_health:
+    min_samples: 5
+    min_success_rate_pct: 80
+    max_llm_ttft_p95_seconds: 15
+    max_total_turn_p95_seconds: 60
 
 server:
   host: 0.0.0.0              # wildcard bind (required for non-root port 443 on macOS)

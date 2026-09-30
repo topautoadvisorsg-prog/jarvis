@@ -46,8 +46,10 @@ def test_operational_model_and_latency_fields_are_visible():
     assert 'id="mdBrain"' in INDEX_HTML
     assert 'id="uLatency"' in INDEX_HTML
     assert 'id="uSuccess"' in INDEX_HTML
+    assert 'id="uHealth"' in INDEX_HTML
     assert "total_turn_p50_seconds" in INDEX_HTML
     assert "success_rate_pct" in INDEX_HTML
+    assert "performance_health" in INDEX_HTML
 
 
 def test_websocket_callbacks_are_scoped_to_the_active_connection():

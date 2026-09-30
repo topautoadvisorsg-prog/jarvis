@@ -369,7 +369,10 @@ whenever available.
 configured Hermes provider/model plus privacy-safe recent success and latency
 aggregates. A minimal live turn proved the current DeepSeek route and recorded
 the resolved model, tokens, estimated cost, and wall time. No automatic selector
-or second agent was added. See `JARVIS-OPERATIONAL-TELEMETRY.md`.
+or second agent was added. Configurable local guardrails now classify enough
+evidence as healthy or degraded while leaving small/incomplete samples in a
+visible warming-up state. Intentional STOP/barge-in does not count as a backend
+reliability failure. See `JARVIS-OPERATIONAL-TELEMETRY.md`.
 
 Measure latency and cost first. Use deterministic routing for domain/tool/approval
 decisions. Pin cheap models for scheduled summaries and bounded classifications;
