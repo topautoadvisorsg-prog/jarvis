@@ -257,6 +257,13 @@ in CRM/audit history, and rejected when authority or an objective limit is absen
 
 ### Milestone 3 - WhatsApp remote access to the same Jarvis
 
+Current status (2026-09-30): the bundled bridge dependencies are installed and
+its 22 tests pass. A locked-down local configuration is prepared with WhatsApp
+disabled until pairing, DM allowlisting, groups disabled, and allow-all off.
+The remaining first-proof step is Buddy's interactive QR pairing, followed by
+the `jarvis-main` handoff and acceptance checks documented in
+`JARVIS-WHATSAPP-ROLLOUT.md`.
+
 Use Hermes's existing WhatsApp integration; do not add a separate messaging
 agent. For a quick internal proof, the Baileys bridge can link an existing
 WhatsApp account without a Meta developer application, but it is unofficial,
