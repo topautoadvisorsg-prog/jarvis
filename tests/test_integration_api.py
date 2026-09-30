@@ -15,6 +15,7 @@ def test_api_open_when_no_token(no_token, client):
     assert r.status_code == 200
     assert "llm" in r.json()
     assert "performance" in r.json()
+    assert "performance_health" in r.json()
 
 
 def test_config_summary_exposes_model_labels_without_credentials(no_token, client):

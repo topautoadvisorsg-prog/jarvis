@@ -100,8 +100,13 @@ isolation. See `JARVIS-BROWSER-RELIABILITY.md`.
    signed startup and update/rollback handling for customer deployment.
 4. Extend the deterministic browser acceptance with real microphone/speaker and
    network-fault runs on the customer hardware profile.
-5. Record latency and cost budgets for STT, Hermes, tools, and TTS. Alert on
-   regressions rather than relying on subjective testing.
+5. **Performance regression first stage complete (2026-09-30).** The HUD now
+   evaluates sufficiently sampled completion reliability, p95 Hermes response,
+   and p95 end-to-end turn time against configurable local guardrails. STOP and
+   barge-in do not count as failures, and incomplete evidence remains visibly
+   `WARMING UP`. Provider-specific STT, tool, TTS, and verified cost budgets are
+   still required before this item is complete. See
+   `JARVIS-OPERATIONAL-TELEMETRY.md`.
 
 ### P1 — Security and customer boundary
 

@@ -144,6 +144,7 @@ def read_performance(path: Path = LOG_PATH, max_records: int = 200) -> dict:
     failed = len(rows) - successful - interrupted
     ttft = values("llm_time_to_first_token_seconds")
     total = values("total_turn_seconds")
+    reliability_samples = successful + failed
     latest = next(
         (
             {
@@ -162,11 +163,84 @@ def read_performance(path: Path = LOG_PATH, max_records: int = 200) -> dict:
         "interrupted_turns": interrupted,
         "failed_turns": failed,
         "success_rate_pct": round(successful / len(rows) * 100, 1) if rows else None,
+        "reliability_sample_count": reliability_samples,
+        "completion_success_rate_pct": (
+            round(successful / reliability_samples * 100, 1)
+            if reliability_samples else None
+        ),
+        "llm_ttft_sample_count": len(ttft),
         "llm_ttft_p50_seconds": percentile(ttft, 0.5),
         "llm_ttft_p95_seconds": percentile(ttft, 0.95),
+        "total_turn_sample_count": len(total),
         "total_turn_p50_seconds": percentile(total, 0.5),
         "total_turn_p95_seconds": percentile(total, 0.95),
         "latest": latest,
+    }
+
+
+def evaluate_performance_health(performance: dict, config: dict | None = None) -> dict:
+    """Evaluate privacy-safe turn aggregates against configurable local guardrails."""
+    config = config if isinstance(config, dict) else {}
+
+    def positive_number(name: str, default: float) -> float:
+        value = config.get(name, default)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+            return default
+        return float(value)
+
+    min_samples = max(1, int(positive_number("min_samples", 5)))
+    specifications = (
+        (
+            "completion_success_rate_pct",
+            "reliability_sample_count",
+            ">=",
+            positive_number("min_success_rate_pct", 80),
+        ),
+        (
+            "llm_ttft_p95_seconds",
+            "llm_ttft_sample_count",
+            "<=",
+            positive_number("max_llm_ttft_p95_seconds", 15),
+        ),
+        (
+            "total_turn_p95_seconds",
+            "total_turn_sample_count",
+            "<=",
+            positive_number("max_total_turn_p95_seconds", 60),
+        ),
+    )
+    checks = []
+    regressions = []
+    for metric, sample_metric, operator, threshold in specifications:
+        value = performance.get(metric)
+        sample_count = int(performance.get(sample_metric) or 0)
+        status = "unknown"
+        if sample_count >= min_samples and isinstance(value, (int, float)) and not isinstance(value, bool):
+            passed = value >= threshold if operator == ">=" else value <= threshold
+            status = "pass" if passed else "fail"
+        check = {
+            "metric": metric,
+            "status": status,
+            "value": value,
+            "threshold": threshold,
+            "operator": operator,
+            "sample_count": sample_count,
+        }
+        checks.append(check)
+        if status == "fail":
+            regressions.append(check)
+
+    if regressions:
+        status = "degraded"
+    elif all(check["status"] == "pass" for check in checks):
+        status = "healthy"
+    else:
+        status = "insufficient_data"
+    return {
+        "status": status,
+        "min_samples": min_samples,
+        "checks": checks,
+        "regressions": regressions,
     }
 
 
@@ -1533,12 +1607,17 @@ async def usage() -> JSONResponse:
             return None
         return round(b.get("llm_in", 0) / 1e6 * cin + b.get("llm_out", 0) / 1e6 * cout, 4)
 
+    performance = read_performance()
     out = {
         "llm": {
             "today": u["today"], "total": u["total"],
             "today_cost": est(u["today"]), "total_cost": est(u["total"]),
         },
-        "performance": read_performance(),
+        "performance": performance,
+        "performance_health": evaluate_performance_health(
+            performance,
+            cost_cfg.get("performance_health") or {},
+        ),
         "elevenlabs": None,
     }
     # ElevenLabs subscription — NEVER blocks the response: serve the cache and
