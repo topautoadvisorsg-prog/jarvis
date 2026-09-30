@@ -27,6 +27,7 @@ cp server/config/server.example.yaml server/config/server.yaml
 | `test_unit_security.py`     | unit        | secret-redaction filter, proxy allow-list, HTTP/WS auth decision helpers, sentence splitting |
 | `test_integration_api.py`   | integration | real FastAPI stack via TestClient: auth middleware, `/api/chat` validation, Hermes proxy allow-list, `/api/summon`, dashboard-proxy auth gate |
 | `test_e2e_ws.py`            | e2e         | full `/ws` turn protocol (start → audio → stop → transcript → agent_status → audio → done) with a fake pipeline |
+| `test_audit_timeline.py`    | unit/integration | append-only audit redaction, bounded reads, API authentication, and Hermes tool-result parsing |
 | `test_security_exploits.py` | security PoC | **executable proof** of the audit findings (HUD XSS, WS token bypass, default-open posture) |
 | `test_backdoor_scan.py`     | security    | static scan: no code-exec sinks, argv-list subprocess, no unexpected outbound hosts |
 

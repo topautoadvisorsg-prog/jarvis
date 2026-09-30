@@ -32,6 +32,7 @@ import uuid
 import wave
 from collections import deque
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncIterator, Iterator
 
@@ -54,9 +55,12 @@ CONFIG_PATH = ROOT / "config" / "server.yaml"
 LOG_PATH = ROOT / "logs" / "latency.jsonl"
 STATE_PATH = ROOT / "logs" / "hermes_sessions.json"
 USAGE_PATH = ROOT / "logs" / "usage_stats.json"
+AUDIT_PATH = ROOT / "logs" / "audit.jsonl"
 HERMES_CONFIG_PATH = Path.home() / ".hermes" / "config.yaml"
 FIRED_PATH = ROOT / "logs" / "proactive_fired.json"  # scheduler "already fired today" guard
 _USAGE_LOCK = threading.Lock()
+_AUDIT_LOCK = threading.Lock()
+_AUDIT_MAX_BYTES = 5 * 1024 * 1024
 
 
 def _today() -> str:
@@ -181,6 +185,13 @@ def read_hermes_model_config(path: Path = HERMES_CONFIG_PATH) -> dict[str, str]:
     }
 
 
+def audit_model_labels(provider: str, model: str) -> dict[str, str]:
+    """Resolve Hermes's configured provider/model while preserving fallbacks."""
+    if provider == "hermes":
+        return read_hermes_model_config()
+    return {"provider": provider or "unknown", "model": model or "unknown"}
+
+
 ENV_PATHS = [Path.home() / ".hermes" / ".env", ROOT / ".env"]
 SENTENCE_RE = re.compile(r"(.+?[.!?])(?=\s|$)", re.DOTALL)
 THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
@@ -192,6 +203,92 @@ SECRET_RES = [
     re.compile(r"\b[A-Za-z0-9+/_\-]{36,}\b"),          # long opaque blobs (keys, JWT segments)
     re.compile(r"-----BEGIN [A-Z ]+-----.*?-----END [A-Z ]+-----", re.DOTALL),
 ]
+AUDIT_SENSITIVE_KEY_RE = re.compile(
+    r"(?:api[_-]?key|secret|password|passwd|token|bearer|authorization|cookie|credential)",
+    re.IGNORECASE,
+)
+AUDIT_IDENTITY_KEYS = {
+    "event", "turn_id", "run_id", "channel", "provider",
+    "model", "tool", "decision", "status", "status_code", "request_id",
+}
+
+
+def _audit_sanitize(value, *, key: str = "", depth: int = 0):
+    """Bound and redact audit values before they ever reach disk or the HUD."""
+    if depth > 4:
+        return "[TRUNCATED]"
+    if AUDIT_SENSITIVE_KEY_RE.search(key):
+        return "[REDACTED]"
+    if isinstance(value, dict):
+        return {
+            str(k)[:80]: _audit_sanitize(v, key=str(k), depth=depth + 1)
+            for k, v in list(value.items())[:30]
+        }
+    if isinstance(value, (list, tuple)):
+        return [_audit_sanitize(v, key=key, depth=depth + 1) for v in list(value)[:30]]
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    text = re.sub(r"\s+", " ", str(value)).strip()
+    if key not in AUDIT_IDENTITY_KEYS:
+        if text.startswith(("{", "[")):
+            try:
+                structured = json.loads(text)
+            except (TypeError, ValueError):
+                pass
+            else:
+                if isinstance(structured, (dict, list)):
+                    text = json.dumps(
+                        _audit_sanitize(structured, depth=depth + 1),
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    )
+        for pattern in SECRET_RES:
+            text = pattern.sub("[REDACTED]", text)
+    return text[:500]
+
+
+def record_audit(event: str, *, path: Path | None = None, **fields) -> dict:
+    """Append one privacy-safe local audit record; logging never breaks a turn."""
+    target = path or AUDIT_PATH
+    record = {
+        "id": uuid.uuid4().hex,
+        "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+        "event": str(event)[:80],
+        **{str(k)[:80]: _audit_sanitize(v, key=str(k)) for k, v in fields.items()},
+    }
+    try:
+        with _AUDIT_LOCK:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.exists() and target.stat().st_size >= _AUDIT_MAX_BYTES:
+                target.replace(target.with_suffix(target.suffix + ".1"))
+            with target.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
+    except OSError as exc:
+        print(f"AUDIT WRITE FAILED: {exc}", flush=True)
+    return record
+
+
+def read_audit(limit: int = 50, *, path: Path | None = None) -> list[dict]:
+    """Return newest local audit records first, ignoring malformed lines."""
+    target = path or AUDIT_PATH
+    try:
+        lines = target.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    rows: list[dict] = []
+    for line in reversed(lines[-max(1, min(int(limit), 100)) * 3:]):
+        try:
+            row = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(row, dict):
+            rows.append({
+                str(k)[:80]: _audit_sanitize(v, key=str(k))
+                for k, v in list(row.items())[:50]
+            })
+        if len(rows) >= max(1, min(int(limit), 100)):
+            break
+    return rows
 
 
 def load_env() -> None:
@@ -381,6 +478,14 @@ class HermesAPI:
                 if name.startswith("_"):
                     continue  # internal pseudo-tools like _thinking
                 yield ("tool", json.dumps({"name": name, "preview": (data.get("preview") or "")[:200]}))
+            elif ev in ("tool.completed", "tool.finished", "tool.result"):
+                name = data.get("tool_name") or data.get("name") or "tool"
+                if name.startswith("_"):
+                    continue
+                result = data.get("result_preview", data.get("output", data.get("result", "")))
+                if not isinstance(result, str):
+                    result = json.dumps(result, ensure_ascii=False)
+                yield ("tool_result", json.dumps({"name": name, "preview": result[:500]}))
             elif ev in ("approval.request", "approval_required"):
                 yield ("approval", json.dumps(data)[:2000])
             elif ev == "assistant.completed":
@@ -849,16 +954,43 @@ class VoicePipelineServer:
                 if kind == "run":
                     timing.run_id = value
                     conn.current_run_id = value
+                    labels = audit_model_labels(timing.llm_provider, timing.llm_model)
+                    record_audit(
+                        "run.started", turn_id=timing.turn_id, run_id=value,
+                        conversation=conn.conversation, provider=labels["provider"],
+                        model=labels["model"],
+                    )
                     await ws.send_json({"type": "run_started", "run_id": value})
                     continue
                 if kind == "tool":
                     info = json.loads(value)
                     timing.tools_used.append(info.get("name", "tool"))
+                    record_audit(
+                        "tool.started", turn_id=timing.turn_id, run_id=conn.current_run_id,
+                        conversation=conn.conversation, tool=info.get("name", "tool"),
+                        input_preview=info.get("preview", ""),
+                    )
                     await ws.send_json({"type": "agent_status", "state": "tool_use",
                                         "tool": info.get("name"), "preview": info.get("preview", "")})
                     continue
+                if kind == "tool_result":
+                    info = json.loads(value)
+                    record_audit(
+                        "tool.completed", turn_id=timing.turn_id, run_id=conn.current_run_id,
+                        conversation=conn.conversation, tool=info.get("name", "tool"),
+                        output_preview=info.get("preview", ""),
+                    )
+                    continue
                 if kind == "approval":
-                    await ws.send_json({"type": "approval_request", "data": json.loads(value),
+                    approval = json.loads(value)
+                    record_audit(
+                        "approval.requested", turn_id=timing.turn_id,
+                        run_id=conn.current_run_id, conversation=conn.conversation,
+                        request_id=(approval.get("request_id") or approval.get("approval_id") or approval.get("id")),
+                        request_preview=(approval.get("preview") or approval.get("command")
+                                         or approval.get("description") or "approval required"),
+                    )
+                    await ws.send_json({"type": "approval_request", "data": approval,
                                         "run_id": conn.current_run_id})
                     continue
                 if kind == "final":
@@ -1229,6 +1361,11 @@ async def hud_chat(request: Request) -> JSONResponse:
     if not text:
         return JSONResponse({"error": "empty input"}, status_code=400)
     out: dict = {"text": "", "tools": [], "run_id": None}
+    turn_id = f"http-{uuid.uuid4().hex[:12]}"
+    record_audit(
+        "request.accepted", turn_id=turn_id, conversation=conversation,
+        channel="http", request_preview=text,
+    )
 
     def run_sync() -> None:
         timeout = float((CFG.get("hermes") or {}).get("timeout", 240))
@@ -1239,9 +1376,28 @@ async def hud_chat(request: Request) -> JSONResponse:
                 if kind == "text":
                     parts.append(value)
                 elif kind == "tool":
-                    out["tools"].append(json.loads(value))
+                    info = json.loads(value)
+                    out["tools"].append(info)
+                    record_audit(
+                        "tool.started", turn_id=turn_id, run_id=out["run_id"],
+                        conversation=conversation, tool=info.get("name", "tool"),
+                        input_preview=info.get("preview", ""),
+                    )
+                elif kind == "tool_result":
+                    info = json.loads(value)
+                    record_audit(
+                        "tool.completed", turn_id=turn_id, run_id=out["run_id"],
+                        conversation=conversation, tool=info.get("name", "tool"),
+                        output_preview=info.get("preview", ""),
+                    )
                 elif kind == "run":
                     out["run_id"] = value
+                    model = read_hermes_model_config()
+                    record_audit(
+                        "run.started", turn_id=turn_id, run_id=value,
+                        conversation=conversation, provider=model["provider"],
+                        model=model["model"],
+                    )
                 elif kind == "final":
                     info = json.loads(value)
                     if info.get("content"):
@@ -1260,9 +1416,32 @@ async def hud_chat(request: Request) -> JSONResponse:
 
     try:
         await asyncio.to_thread(run_sync)
+        model = read_hermes_model_config()
+        record_audit(
+            "turn.completed", turn_id=turn_id, run_id=out["run_id"],
+            conversation=conversation, channel="http", provider=model["provider"],
+            model=model["model"], tools=[tool.get("name", "tool") for tool in out["tools"]],
+            result_preview=out["text"],
+        )
         return JSONResponse(out)
     except Exception as exc:
+        record_audit(
+            "turn.failed", turn_id=turn_id, run_id=out["run_id"],
+            conversation=conversation, channel="http",
+            error_type=type(exc).__name__, error=str(exc),
+        )
         return JSONResponse({"error": str(exc)}, status_code=502)
+
+
+@app.get("/api/audit")
+async def audit_timeline(limit: int = 50) -> JSONResponse:
+    """Privacy-safe, read-only local Jarvis audit history for the HUD."""
+    bounded = max(1, min(int(limit), 100))
+    return JSONResponse({
+        "source": "jarvis_local_audit",
+        "events": read_audit(bounded),
+        "limit": bounded,
+    })
 
 
 def _live_config() -> dict:
@@ -1925,8 +2104,16 @@ async def _run_turn(ws: WebSocket, pipeline: VoicePipelineServer, conn: ConnStat
         timing.transcript = transcript
         await ws.send_json({"type": "transcript", "text": transcript})
         if not transcript:
+            record_audit(
+                "turn.failed", turn_id=timing.turn_id, conversation=conn.conversation,
+                channel="voice", status="no_transcript",
+            )
             await ws.send_json({"type": "error", "message": "No transcript detected."})
         else:
+            record_audit(
+                "request.accepted", turn_id=timing.turn_id, conversation=conn.conversation,
+                channel="voice", request_preview=transcript,
+            )
             if conn.interrupt_note:
                 transcript_sent = (
                     f"[note: your previous spoken reply was cut off by the user after you said: "
@@ -1938,13 +2125,30 @@ async def _run_turn(ws: WebSocket, pipeline: VoicePipelineServer, conn: ConnStat
             conn.spoken_sentences = []
             await pipeline.stream_response_audio(ws, transcript_sent, timing, conn)
             timing.total_done_monotonic = time.perf_counter()
+            labels = audit_model_labels(timing.llm_provider, timing.llm_model)
+            record_audit(
+                "turn.completed", turn_id=timing.turn_id, run_id=timing.run_id,
+                conversation=conn.conversation, channel="voice",
+                provider=labels["provider"], model=labels["model"],
+                tools=timing.tools_used, result_preview=timing.response_text,
+                duration_seconds=timing.summary().get("total_turn_seconds"),
+            )
             await ws.send_json({"type": "done", "turn_id": timing.turn_id, "timing": timing.summary()})
     except asyncio.CancelledError:
         timing.interrupted = True
         timing.errors.append("turn cancelled (barge-in or stop)")
+        record_audit(
+            "turn.cancelled", turn_id=timing.turn_id, run_id=timing.run_id,
+            conversation=conn.conversation, channel="voice",
+        )
         raise
     except Exception as exc:
         timing.errors.append(f"{type(exc).__name__}: {exc}")
+        record_audit(
+            "turn.failed", turn_id=timing.turn_id, run_id=timing.run_id,
+            conversation=conn.conversation, channel="voice",
+            error_type=type(exc).__name__, error=str(exc),
+        )
         try:
             await ws.send_json({"type": "error", "message": str(exc)})
         except Exception:
@@ -1971,17 +2175,41 @@ async def _run_text_turn(
     timing.transcript = text
     conn.timing = timing
     conn.spoken_sentences = []
+    record_audit(
+        "request.accepted", turn_id=timing.turn_id, conversation=conn.conversation,
+        channel="typed" if synthesize else "delegated", request_preview=text,
+    )
     try:
         await pipeline.stream_response_audio(ws, text, timing, conn, synthesize=synthesize)
         timing.total_done_monotonic = time.perf_counter()
+        labels = audit_model_labels(timing.llm_provider, timing.llm_model)
+        record_audit(
+            "turn.completed", turn_id=timing.turn_id, run_id=timing.run_id,
+            conversation=conn.conversation,
+            channel="typed" if synthesize else "delegated",
+            provider=labels["provider"], model=labels["model"],
+            tools=timing.tools_used, result_preview=timing.response_text,
+            duration_seconds=timing.summary().get("total_turn_seconds"),
+        )
         await ws.send_json({"type": "done", "turn_id": timing.turn_id,
                             "delegation_id": delegation_id, "timing": timing.summary()})
     except asyncio.CancelledError:
         timing.interrupted = True
         timing.errors.append("typed turn cancelled (barge-in or stop)")
+        record_audit(
+            "turn.cancelled", turn_id=timing.turn_id, run_id=timing.run_id,
+            conversation=conn.conversation,
+            channel="typed" if synthesize else "delegated",
+        )
         raise
     except Exception as exc:
         timing.errors.append(f"{type(exc).__name__}: {exc}")
+        record_audit(
+            "turn.failed", turn_id=timing.turn_id, run_id=timing.run_id,
+            conversation=conn.conversation,
+            channel="typed" if synthesize else "delegated",
+            error_type=type(exc).__name__, error=str(exc),
+        )
         try:
             await ws.send_json({"type": "error", "message": str(exc)})
         except Exception:
@@ -1998,6 +2226,10 @@ async def _cancel_active_turn(ws: WebSocket, pipeline: VoicePipelineServer, conn
     run_id = conn.current_run_id  # capture BEFORE cancel: turn cleanup clears it
     turn_was_active = conn.turn_task is not None and not conn.turn_task.done()
     if turn_was_active:
+        record_audit(
+            "cancellation.requested", turn_id=conn.timing.turn_id if conn.timing else None,
+            run_id=run_id, conversation=conn.conversation,
+        )
         if conn.spoken_sentences:
             conn.interrupt_note = conn.spoken_sentences[-1]
         conn.turn_task.cancel()
@@ -2145,6 +2377,13 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                         "request_id": event.get("approval_id"),
                     }
                     res = await asyncio.to_thread(HERMES.post_approval, run_id, body)
+                    record_audit(
+                        "approval.decided",
+                        turn_id=conn.timing.turn_id if conn.timing else None,
+                        run_id=run_id, conversation=conn.conversation,
+                        request_id=event.get("approval_id"), decision=decision,
+                        status_code=res["status_code"],
+                    )
                     await ws.send_json({"type": "status", "message": f"Approval sent ({res['status_code']})."})
                 else:
                     await ws.send_json({"type": "error", "message": f"Unknown event type: {etype}"})

@@ -55,3 +55,10 @@ def test_websocket_callbacks_are_scoped_to_the_active_connection():
     assert "const socket=new WebSocket" in INDEX_HTML
     assert INDEX_HTML.count("if(socket!==ws||epoch!==wsEpoch)return") >= 3
     assert "currentRun=null;capturing=false;stopPlayback();showStop(false)" in INDEX_HTML
+
+
+def test_hud_displays_the_durable_redacted_audit_timeline():
+    assert "AUDIT TIMELINE" in INDEX_HTML
+    assert 'fetch("/api/audit?limit=30")' in INDEX_HTML
+    assert "function auditSummary(row)" in INDEX_HTML
+    assert "setInterval(refreshAudit,5000)" in INDEX_HTML

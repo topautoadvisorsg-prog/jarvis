@@ -99,6 +99,14 @@ def _clean_ws_clients(server_mod):
     server_mod.WS_CLIENTS.clear()
 
 
+@pytest.fixture(autouse=True)
+def isolated_audit_path(server_mod, monkeypatch, tmp_path):
+    """Tests must never append synthetic events to the operator's real audit."""
+    path = tmp_path / "audit.jsonl"
+    monkeypatch.setattr(server_mod, "AUDIT_PATH", path)
+    return path
+
+
 @pytest.fixture()
 def client(server_mod):
     """TestClient for the main voice/HUD app (no lifespan -> no STT warm)."""

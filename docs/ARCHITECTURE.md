@@ -14,12 +14,16 @@
    `logs/hermes_sessions.json` per conversation name, so memory survives
    restarts. Typed chat (`/api/chat`) uses the *same* session.
 4. SSE events parsed: `run.started` (run id → STOP support), `assistant.delta`
-   (text), `tool.started` (name + preview → HUD activity), `assistant.completed`
+   (text), `tool.started` (name + preview → HUD activity), `tool.completed`
+   (bounded output preview → local audit), `assistant.completed`
    (incl. `interrupted` flag), `run.completed` (token usage), `*approval*`
    (→ HUD approval cards).
 5. Text is sentence-split, markdown/think-block-stripped, **secret-redacted**,
    then each sentence streams through ElevenLabs back to the client as raw PCM
    while generation continues.
+6. A bounded, credential-redacted lifecycle record is appended to the local
+   audit and exposed read-only to the existing HUD timeline. SmartKlix remains
+   authoritative for business workflow history.
 
 Why the Sessions API and not `/v1/responses` or `/v1/runs`: on Hermes v0.16,
 sessions are the only surface that combines named persistent memory, run ids,
