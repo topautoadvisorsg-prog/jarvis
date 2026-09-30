@@ -282,6 +282,12 @@ messaging authority is enabled.
 
 ### Milestone 4 - proactive alerts
 
+Current status (2026-09-30): deterministic event normalization plus local
+dedupe, cooldown, and quiet-hour policy are implemented behind the read-only
+`get_smartklix_attention` MCP tool. External delivery remains disabled until
+WhatsApp pairing and the synthetic delivery acceptance test. See
+`JARVIS-SMARTKLIX-ATTENTION-ENGINE.md`.
+
 Expose a signed SmartKlix event adapter to Hermes webhooks. Implement the
 deterministic severity policy, dedupe/cooldown ledger, quiet hours, and WhatsApp
 delivery. Begin with synthetic events, then supervised real read-only events.
