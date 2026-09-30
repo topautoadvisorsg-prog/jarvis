@@ -80,8 +80,12 @@ human approval, and deterministic execution remain authoritative.
 - The route includes leads, research-relevant CRM state, drafts/proposals,
   approvals, sends, replies, failures, calls/intake, meetings, revenue, and
   safety-control status where the underlying records exist.
-- The production route still needs deployment and matching read-token
-  configuration before Jarvis has live CRM visibility.
+- The production route is deployed and fails closed with
+  `JARVIS_READ_NOT_CONFIGURED`. Matching private read-token configuration in
+  Vercel is the remaining activation step; the protected local Hermes token is
+  prepared. The currently cached Vercel CLI identity cannot access the linked
+  team project, so that production setting requires an authorized Vercel
+  login/team member.
 - Retell inbound receptionist intake already exists with signed webhook
   verification, idempotent receipts, bounded recovery, retained failures, and
   manual review boundaries.
@@ -229,11 +233,13 @@ distribution review before it becomes part of the commercial product.
 
 ### Milestone 0 - activate and verify the existing eyes
 
-**Partially complete.** The adapters, source labels, failure reporting, and
-tests are implemented. The remaining blocker is deployment and live acceptance
-of the SmartKlix CRM read route with matching private tokens.
+**Partially complete.** The adapters, source labels, failure reporting, tests,
+and production route deployment are complete. The remaining blocker is matching
+private-token configuration followed by live authenticated acceptance. The safe
+preflight reports the current state without changing production or printing the
+secret.
 
-1. Deploy the existing SmartKlix read-only route.
+1. Confirm the deployed SmartKlix read-only route with the safe preflight.
 2. Configure matching 32+ character CRM/Jarvis read tokens without exposing them
    to the browser or source control.
 3. Build the existing outreach UI, start Redis and the approved supervised
@@ -386,7 +392,7 @@ work remain later features after the operator loop is reliable and measurable.
 The remaining Milestone 0 deliverable is a live, read-only operations acceptance
 report covering:
 
-- CRM route deployment and authentication;
+- CRM authentication with the already-deployed route;
 - local outreach endpoint health;
 - Jarvis MCP discovery from `jarvis-main`;
 - answers for current work, attention, leads, drafts, approvals, sends, replies,
