@@ -55,6 +55,11 @@ nvidia-cudnn-cu12` into the same venv.
 **HUD unreachable for ~15 s after a restart** — normal: launchd's respawn
 throttle. If it lasts longer, run `scripts/jarvis-health.sh` on the host.
 
+**WSL HUD repeatedly exits** — run `scripts/jarvis-health.sh` and inspect
+`run/jarvis-supervisor.json`. The supervisor stops after five crashes inside ten
+minutes instead of looping forever. The launcher reports the safe status and
+local `logs/server.log` path when the 30-second health gate fails.
+
 **HTTPS dead but the plain ws port still answers** — two known causes, both
 fixed in current files but worth knowing: (1) file-descriptor exhaustion
 (launchd default is 256; the shipped plist raises it to 8192), and (2) an

@@ -107,11 +107,14 @@ scripts/make-boot-audio.sh YourFirstName
 ### Run it
 
 ```bash
-.venv/bin/python server.py
+scripts/jarvis-start.sh
+scripts/jarvis-health.sh
 ```
 
-Wait ~40 s for the STT model to warm, then open `https://YOUR_HOST/hud/`.
-Run `scripts/jarvis-health.sh` to check all five services.
+The launcher supervises the HUD on WSL/Linux and uses the configured launchd
+services on macOS. Direct `.venv/bin/python server.py` startup is for foreground
+development only. Wait for the launcher health gate, then open
+`https://YOUR_HOST/hud/`.
 
 ## 4. Auto-start on boot (macOS)
 

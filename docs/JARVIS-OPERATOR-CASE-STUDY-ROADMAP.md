@@ -411,7 +411,9 @@ The local second-brain evaluation, alert preview, bounded research-console
 control, read-only computer vision, and personal Google connector preparation
 are already complete. None of them replaces the remaining live CRM acceptance.
 WhatsApp pairing and personal Google OAuth are independent pending activation
-steps owned by Buddy's accounts.
+steps owned by Buddy's accounts. These and the SmartKlix Vercel authorization
+are tracked in `BUDDY-ACTION-CHECKLIST.md` so engineering can continue without
+losing the account-dependent work.
 
 ## Risks to carry forward
 
