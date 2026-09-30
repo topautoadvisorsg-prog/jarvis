@@ -7,6 +7,11 @@ not block local Jarvis engineering.
 
 ## Pending activations
 
+- [ ] **Run the room-level voice lifecycle test when available.** On the actual
+  microphone and speakers, verify wake/voice activation, continuous listening,
+  the voice shutoff or sleep command, STOP during a response, barge-in while
+  Jarvis is speaking, and the return to standby. Record any missed activation,
+  failure to stop listening, echo, duplicate playback, or delayed interruption.
 - [ ] **Finish WhatsApp QR pairing.** Resume the existing pairing wizard, scan
   the QR code with the intended account, and confirm the allowlisted owner
   number. Keep groups and customer messaging disabled during acceptance.
