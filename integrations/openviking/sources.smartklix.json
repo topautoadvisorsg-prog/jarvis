@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "deployment": {
+    "customerId": "buddy-local",
+    "account": "default",
+    "user": "default",
+    "agent": "jarvis-main",
+    "namespace": "smartklix"
+  },
+  "server": {
+    "endpoint": "http://127.0.0.1:1933"
+  },
+  "policy": {
+    "allowedExtensions": [".md", ".txt"],
+    "maxFileBytes": 524288,
+    "blockedPathParts": [
+      ".env",
+      ".git",
+      ".local",
+      "node_modules",
+      "credentials",
+      "customer-data",
+      "prospects",
+      "transcripts"
+    ]
+  },
+  "sources": [
+    {
+      "id": "jarvis-architecture",
+      "root": ".",
+      "path": "docs/ARCHITECTURE.md",
+      "target": "jarvis/architecture/ARCHITECTURE.md",
+      "status": "current",
+      "ownerSystem": "jarvis",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "jarvis-production-readiness",
+      "root": ".",
+      "path": "docs/PRODUCTION-READINESS.md",
+      "target": "jarvis/production-readiness/PRODUCTION-READINESS.md",
+      "status": "current",
+      "ownerSystem": "jarvis",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "jarvis-operator-roadmap",
+      "root": ".",
+      "path": "docs/JARVIS-OPERATOR-CASE-STUDY-ROADMAP.md",
+      "target": "jarvis/operator-roadmap/JARVIS-OPERATOR-CASE-STUDY-ROADMAP.md",
+      "status": "current",
+      "ownerSystem": "jarvis",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "jarvis-second-brain-pilot",
+      "root": ".",
+      "path": "docs/JARVIS-SECOND-BRAIN-PILOT.md",
+      "target": "jarvis/operator-roadmap/JARVIS-SECOND-BRAIN-PILOT.md",
+      "status": "current",
+      "ownerSystem": "jarvis",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "claude-agents-active-architecture",
+      "root": "${SMARTKLIX_AGENTS_ROOT}",
+      "path": "ACTIVE-ARCHITECTURE.md",
+      "target": "claude-agents/active-architecture/ACTIVE-ARCHITECTURE.md",
+      "status": "current",
+      "ownerSystem": "smartklix-claude-agents",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "claude-agents-current-system-plan",
+      "root": "${SMARTKLIX_AGENTS_ROOT}",
+      "path": "CURRENT-SYSTEM-AND-JARVIS-PLAN-20260925.md",
+      "target": "claude-agents/operating-runbooks/CURRENT-SYSTEM-AND-JARVIS-PLAN-20260925.md",
+      "status": "current",
+      "ownerSystem": "smartklix-claude-agents",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "claude-agents-readiness",
+      "root": "${SMARTKLIX_AGENTS_ROOT}",
+      "path": "READINESS.md",
+      "target": "claude-agents/review-and-delivery/READINESS.md",
+      "status": "current",
+      "ownerSystem": "smartklix-claude-agents",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "crm-active-architecture",
+      "root": "${SMARTKLIX_CRM_ROOT}",
+      "path": "ACTIVE-ARCHITECTURE.md",
+      "target": "crm/active-architecture/ACTIVE-ARCHITECTURE.md",
+      "status": "current",
+      "ownerSystem": "smartklix-crm",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "crm-feature-status",
+      "root": "${SMARTKLIX_CRM_ROOT}",
+      "path": "docs/FEATURE-STATUS.md",
+      "target": "crm/feature-status/FEATURE-STATUS.md",
+      "status": "current",
+      "ownerSystem": "smartklix-crm",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "crm-jarvis-read-only-operations",
+      "root": "${SMARTKLIX_CRM_ROOT}",
+      "path": "docs/JARVIS-READ-ONLY-OPERATIONS.md",
+      "target": "crm/approval-and-execution/JARVIS-READ-ONLY-OPERATIONS.md",
+      "status": "current",
+      "ownerSystem": "smartklix-crm",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "crm-outreach-boundary",
+      "root": "${SMARTKLIX_CRM_ROOT}",
+      "path": "docs/OUTREACH-BOUNDARY.md",
+      "target": "crm/approval-and-execution/OUTREACH-BOUNDARY.md",
+      "status": "current",
+      "ownerSystem": "smartklix-crm",
+      "sensitivity": "internal-architecture"
+    },
+    {
+      "id": "crm-mailbox-recovery",
+      "root": "${SMARTKLIX_CRM_ROOT}",
+      "path": "docs/MAILBOX-RECOVERY.md",
+      "target": "crm/intake-and-recovery/MAILBOX-RECOVERY.md",
+      "status": "current",
+      "ownerSystem": "smartklix-crm",
+      "sensitivity": "internal-architecture"
+    }
+  ]
+}

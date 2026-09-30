@@ -189,7 +189,17 @@ def test_startup_check_silent_on_loopback(no_token, server_mod, monkeypatch):
 
 
 def test_startup_check_silent_with_token(with_token, server_mod, monkeypatch):
-    monkeypatch.setitem(server_mod.CFG, "security", {"require_token": True})
+    # Preserve the configured environment-variable name populated by the
+    # with_token fixture. Replacing the entire mapping with only require_token
+    # silently changes hud_token() back to JARVIS_HUD_TOKEN.
+    token_env = (server_mod.CFG.get("security") or {}).get(
+        "hud_token_env", "JARVIS_HUD_TOKEN"
+    )
+    monkeypatch.setitem(
+        server_mod.CFG,
+        "security",
+        {"require_token": True, "hud_token_env": token_env},
+    )
     assert server_mod._security_startup_check("0.0.0.0") is None  # token present -> fine
 
 

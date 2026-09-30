@@ -160,3 +160,8 @@ else
     curl -s -m 5 http://127.0.0.1:8642/health | grep -q ok \
         && ok "hermes api (8642)" OK || ok "hermes api (8642)" DOWN
 fi
+
+if [ -x "$HOME/.local/share/openviking/venv/bin/openviking-server" ]; then
+    curl -s -m 5 http://127.0.0.1:1933/health | grep -q '"healthy":true' \
+        && ok "second brain (1933)" OK || ok "second brain (1933)" DOWN
+fi

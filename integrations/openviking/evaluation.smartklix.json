@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "jarvis-turn-flow",
+      "question": "How does a Jarvis voice turn move from microphone input through Hermes and back to the HUD?",
+      "expectedTarget": "jarvis/architecture/ARCHITECTURE",
+      "expectedFacts": ["voice server", "Hermes", "stream"]
+    },
+    {
+      "id": "jarvis-stop-barge-in",
+      "question": "How are STOP and barge-in supposed to cancel a running Jarvis turn?",
+      "expectedTarget": "jarvis/architecture/ARCHITECTURE",
+      "expectedFacts": ["stop_run", "barge-in", "cancel"]
+    },
+    {
+      "id": "jarvis-avatar",
+      "question": "What is the current center avatar implementation and how does its lip motion work?",
+      "expectedTarget": "jarvis/architecture/ARCHITECTURE",
+      "expectedFacts": ["avatar", "lip"]
+    },
+    {
+      "id": "jarvis-production-gaps",
+      "question": "What must be completed before the current Jarvis prototype is production ready?",
+      "expectedTarget": "jarvis/production-readiness/PRODUCTION-READINESS",
+      "expectedFacts": ["cold", "security", "acceptance"]
+    },
+    {
+      "id": "jarvis-launch",
+      "question": "What is the approved way to launch the Jarvis HUD on this Windows computer?",
+      "expectedTarget": "jarvis/production-readiness/PRODUCTION-READINESS",
+      "expectedFacts": ["Start Jarvis HUD.lnk"]
+    },
+    {
+      "id": "jarvis-manager-role",
+      "question": "Is Jarvis a separate operations manager agent or is the jarvis-main Hermes session itself the manager?",
+      "expectedTarget": "jarvis/operator-roadmap/JARVIS-OPERATOR-CASE-STUDY-ROADMAP",
+      "expectedFacts": ["Hermes", "Operations Manager role"]
+    },
+    {
+      "id": "smartklix-source-truth",
+      "question": "Which system remains the source of truth for SmartKlix leads, approvals, sends, replies, and revenue?",
+      "expectedTarget": "jarvis/operator-roadmap/JARVIS-OPERATOR-CASE-STUDY-ROADMAP",
+      "expectedFacts": ["SmartKlix CRM", "source of truth"]
+    },
+    {
+      "id": "second-brain-boundary",
+      "question": "What information belongs in OpenViking and what information must remain in live SmartKlix tools?",
+      "expectedTarget": "jarvis/operator-roadmap/JARVIS-SECOND-BRAIN-PILOT",
+      "expectedFacts": ["documents", "live business state"]
+    },
+    {
+      "id": "second-brain-exclusions",
+      "question": "Which files and data are forbidden from the second-brain index?",
+      "expectedTarget": "jarvis/operator-roadmap/JARVIS-SECOND-BRAIN-PILOT",
+      "expectedFacts": ["credentials", "customer", "transcripts"]
+    },
+    {
+      "id": "approved-research-startup",
+      "question": "What command starts the approved supervised SmartKlix local research workflow?",
+      "expectedTarget": "claude-agents/active-architecture/ACTIVE-ARCHITECTURE",
+      "expectedFacts": ["npx tsx scripts/local-research.ts"]
+    },
+    {
+      "id": "dormant-startup-trap",
+      "question": "Should an operator use npm start to launch outreach, or is that the dormant legacy autonomous path?",
+      "expectedTarget": "claude-agents/active-architecture/ACTIVE-ARCHITECTURE",
+      "expectedFacts": ["npm start", "not the approved"]
+    },
+    {
+      "id": "outreach-workers",
+      "question": "Which existing components research prospects, review proposals, execute approved changes, and retain provider receipts?",
+      "expectedTarget": "claude-agents/operating-runbooks/CURRENT-SYSTEM-AND-JARVIS-PLAN-20260925",
+      "expectedFacts": ["researcher", "reviewer", "deterministic executor"]
+    },
+    {
+      "id": "no-duplicate-reviewer",
+      "question": "Why should Hermes not add another supervisor and reviewer loop around normal outreach?",
+      "expectedTarget": "claude-agents/operating-runbooks/CURRENT-SYSTEM-AND-JARVIS-PLAN-20260925",
+      "expectedFacts": ["Do not add", "human approval"]
+    },
+    {
+      "id": "retell-capability",
+      "question": "What can the existing Retell receptionist do, and what general CRM or booking authority does it lack?",
+      "expectedTarget": "jarvis/operator-roadmap/JARVIS-OPERATOR-CASE-STUDY-ROADMAP",
+      "expectedFacts": ["inbound", "no general CRM lookup"]
+    },
+    {
+      "id": "outbound-state",
+      "question": "Is real prospect email delivery currently enabled and accepted?",
+      "expectedTarget": "crm/feature-status/FEATURE-STATUS",
+      "expectedFacts": ["disabled", "OFF"]
+    },
+    {
+      "id": "review-authority",
+      "question": "Can the AI reviewer replace the owner's exact human approval?",
+      "expectedTarget": "crm/feature-status/FEATURE-STATUS",
+      "expectedFacts": ["never", "human approval"]
+    },
+    {
+      "id": "jarvis-read-api",
+      "question": "What does the Jarvis read-only operations route expose and which mutations does it forbid?",
+      "expectedTarget": "crm/approval-and-execution/JARVIS-READ-ONLY-OPERATIONS",
+      "expectedFacts": ["GET /api/jarvis/operations", "no mutation"]
+    },
+    {
+      "id": "cold-warm-boundary",
+      "question": "Where do cold prospects remain before an explicit CRM outreach handoff?",
+      "expectedTarget": "crm/approval-and-execution/OUTREACH-BOUNDARY",
+      "expectedFacts": ["local outreach Redis", "handoff"]
+    },
+    {
+      "id": "mailbox-recovery",
+      "question": "How does missed-mail recovery retry failed receipts and where does its cron run?",
+      "expectedTarget": "crm/intake-and-recovery/MAILBOX-RECOVERY",
+      "expectedFacts": ["Vercel production", "five attempts"]
+    },
+    {
+      "id": "ambiguous-current-status",
+      "question": "Give me the current operating state, but do not treat old checkpoints or a document index as live CRM state.",
+      "expectedTarget": "crm/active-architecture/ACTIVE-ARCHITECTURE",
+      "expectedFacts": ["runtime authority", "September 9"]
+    }
+  ]
+}

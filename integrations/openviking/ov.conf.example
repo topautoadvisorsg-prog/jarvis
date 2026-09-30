@@ -1,0 +1,42 @@
+{
+  "default_account": "default",
+  "default_user": "default",
+  "storage": {
+    "workspace": "/home/REPLACE_ME/.openviking/data"
+  },
+  "embedding": {
+    "dense": {
+      "provider": "local",
+      "model": "bge-small-zh-v1.5-f16",
+      "dimension": 512,
+      "input": "text",
+      "batch_size": 16
+    }
+  },
+  "vlm": {
+    "provider": "openai",
+    "model": "deepseek-chat",
+    "api_key": "${DEEPSEEK_API_KEY}",
+    "api_base": "https://api.deepseek.com/v1",
+    "temperature": 0.0,
+    "max_retries": 2,
+    "max_concurrent": 2,
+    "max_tokens": 2048
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 1933,
+    "workers": 1,
+    "observability": {
+      "metrics": {"enabled": false},
+      "usage_audit": {"enabled": true},
+      "traces": {"enabled": false},
+      "logs": {"enabled": false},
+      "dump_body": {"enabled": false}
+    },
+    "usage_reporter": {"enabled": false}
+  },
+  "telemetry": {
+    "tracer": {"enabled": false}
+  }
+}
