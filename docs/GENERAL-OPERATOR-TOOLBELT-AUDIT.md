@@ -35,9 +35,12 @@ by `jarvis-main` can discover it without a new profile or agent.
 
 Some configured toolsets are not currently operational:
 
-- Computer use: enabled in configuration, but `cua-driver` is not installed.
-  `hermes computer-use doctor` fails for that exact reason. Screen capture,
-  app discovery, mouse, and keyboard control are not working today.
+- Computer use: the official Windows `cua-driver` is installed and its health
+  checks pass. `jarvis-main` is connected through a private bounded runtime and
+  a deny-by-default manifest. App/window inventory and full-screen inspection
+  are enabled. Mouse, keyboard, focus, launch, clipboard, recording, process,
+  browser mutation, and file authority remain denied. See
+  `JARVIS-COMPUTER-CONTROL.md`.
 - Browser interaction: Hermes selects its Browser Use CLI backend and the CLI
   resolves, but a live read-only navigation smoke test failed because no
   supported Chromium-family browser was running. The web search/extract tools
@@ -100,7 +103,7 @@ both sides, restart Jarvis/Hermes, and run a live query from `jarvis-main`. This
 is the smallest step that changes the CRM source from `unavailable` to live.
 Production deployment remains a Buddy-approved action.
 
-After live read acceptance, fix general control in this order: install and
-validate `cua-driver`, choose and validate a browser mode, then connect a
-read-only personal email/calendar surface. Do not add write authority during
-those steps.
+After live SmartKlix read acceptance, validate the existing dedicated browser
+mode, then connect a read-only personal email/calendar surface. Expand computer
+control only for a named workflow and exact application; do not add global write
+authority during those steps.

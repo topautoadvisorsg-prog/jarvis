@@ -316,10 +316,16 @@ agent/configuration.
 
 ### Milestone 7 - computer and screen control
 
-Install the official released `cua-driver` on Windows, run `doctor`, and connect
-Hermes's existing `computer_use` tool. Start with read-only window inventory and
-screen inspection, then a bounded capability manifest for approved apps/actions.
-Prefer APIs and dedicated tools whenever available.
+**Implemented first stage (2026-09-30).** The official released `cua-driver` is
+installed on Windows and its doctor passes. Hermes uses a private bounded runtime
+through the WSL/Windows adapter with a version-3 deny-by-default manifest.
+`jarvis-main` may list apps/windows and inspect the primary screen; mouse,
+keyboard, focus, app launch, clipboard, browser mutation, recording, process,
+and file actions are excluded. See `JARVIS-COMPUTER-CONTROL.md`.
+
+The next expansion must be a separate workflow-specific manifest naming exact
+approved non-browser applications and actions. Prefer APIs and dedicated tools
+whenever available.
 
 ### Milestone 8 - reflex and model routing
 

@@ -1,0 +1,21 @@
+version: 3
+expires_after: 24h
+idle_timeout: 30m
+
+# First computer-use rollout: eyes only. The driver fails closed for every
+# tool omitted from this list, including click, typing, keyboard, scroll,
+# launch, focus, browser mutation, clipboard, recording, and process control.
+allow:
+  tools:
+    - start_session
+    - end_session
+    - list_apps
+    - list_windows
+    - get_screen_size
+    - get_desktop_state
+    - health_report
+    - check_permissions
+
+resources:
+  desktop:
+    display: true
