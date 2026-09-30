@@ -190,3 +190,17 @@ scripts/jarvis-smoke.sh    # synthesized voice turn through the full stack (macO
 
 Then the real test: click the ring and ask "what's in your memory file?" —
 a real agent answers with real file contents.
+
+## 7. Internal rollback package
+
+After the working tree is clean and the intended checkpoint is committed, build
+and immediately verify a secret-free source rollback package:
+
+```bash
+python server/scripts/build-rollback-package.py
+```
+
+The ZIP, outer checksum, source manifest, asset hashes, and restore instructions
+are written under the ignored `server/backups/` directory. See
+[`JARVIS-ROLLBACK-PACKAGE.md`](JARVIS-ROLLBACK-PACKAGE.md) for the recovery
+boundary and verification command.
