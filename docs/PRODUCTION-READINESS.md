@@ -1,6 +1,6 @@
 # JARVIS production readiness
 
-Updated: 23 September 2026
+Updated: 30 September 2026
 
 This document is the handoff for any agent continuing the Windows/Hermes
 deployment. Preserve the approved working checkpoint before changing the
@@ -12,9 +12,8 @@ avatar, voice path, or Hermes bridge.
 - **Runtime:** Hermes Agent 0.21.0 remains the only agent, tool, memory, and
   session runtime. The HUD does not contain a second agent architecture.
 - **Reasoning provider:** Hermes owns model routing. DeepSeek Flash with
-  thinking disabled is the intended economical director, but the tested key
-  returned HTTP 402 for insufficient balance. The working fallback remains
-  OpenAI GPT-6 Astra with reasoning disabled.
+  thinking disabled is active. A real minimal turn completed on 30 September;
+  Hermes resolved it to `deepseek-v4-flash`. No fallback provider is configured.
 - **Speech input:** OpenAI `gpt-4o-transcribe`, 16 kHz mono PCM, with partial
   captions and final transcription.
 - **Speech output:** OpenAI `gpt-4o-mini-tts`, streamed as 16 kHz PCM.
@@ -52,7 +51,11 @@ Approved Git checkpoint before the final size increase: `c6bed57`.
 - Generation ids reject stale audio chunks.
 - Session identifiers persist in the local Hermes bridge.
 - The original Hermes Desktop installation remains separate and usable.
-- Full local automated suite passes: 117 of 117 tests, including HTTP/WebSocket authentication, security regression, integration, HUD static, and backdoor checks.
+- The HUD reports the real configured Hermes provider/model plus aggregate
+  recent success and latency metrics without exposing transcript content.
+- The current local automated suite passes, including HTTP/WebSocket
+  authentication, security regression, integration, HUD static, telemetry,
+  SmartKlix, second-brain, computer-use, and backdoor checks.
 - GPT-Live server exchange and delegation contract are covered by the suite;
   a paid live browser session still requires an account-access acceptance run.
 
@@ -63,11 +66,11 @@ Approved Git checkpoint before the final size increase: `c6bed57`.
 - Lip movement is audio-reactive rather than timestamped phoneme alignment.
 - Wake-word reliability belongs to the Hermes Desktop/openWakeWord path and is
   not yet a proven hands-free loop inside this browser HUD.
-- DeepSeek cannot become the active model until its account is funded and a
-  real Hermes turn succeeds.
-- GPT-Live costs $0.05 per connected minute, billed per second, in addition to
-  Hermes backend/tool costs. It therefore needs idle disconnects, spend caps,
-  and measured task-success/latency data before customer rollout.
+- Provider billing is not yet reconciled across DeepSeek, transcription, TTS,
+  GPT Live, research, and delivery. Local token counts and estimates must not be
+  presented as an authoritative business budget.
+- GPT Live needs idle disconnects, spend caps, and measured task-success/latency
+  data before customer rollout.
 - The current service is a local single-user installation. It is not a
   customer-facing multi-tenant service.
 - Business dashboards show only configured live endpoints; business-specific

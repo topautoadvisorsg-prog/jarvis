@@ -54,6 +54,7 @@ CONFIG_PATH = ROOT / "config" / "server.yaml"
 LOG_PATH = ROOT / "logs" / "latency.jsonl"
 STATE_PATH = ROOT / "logs" / "hermes_sessions.json"
 USAGE_PATH = ROOT / "logs" / "usage_stats.json"
+HERMES_CONFIG_PATH = Path.home() / ".hermes" / "config.yaml"
 FIRED_PATH = ROOT / "logs" / "proactive_fired.json"  # scheduler "already fired today" guard
 _USAGE_LOCK = threading.Lock()
 
@@ -89,6 +90,97 @@ def read_usage() -> dict:
         except Exception:
             data = {"total": {}, "days": {}}
     return {"total": data.get("total", {}), "today": data.get("days", {}).get(_today(), {})}
+
+
+def read_performance(path: Path = LOG_PATH, max_records: int = 200) -> dict:
+    """Aggregate recent turn timing without exposing transcripts or responses."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()[-max_records:]
+    except OSError:
+        lines = []
+    rows = []
+    for line in lines:
+        try:
+            row = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+
+    def values(name: str) -> list[float]:
+        result = []
+        for row in rows:
+            value = row.get(name)
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                result.append(float(value))
+        return result
+
+    def percentile(samples: list[float], percentage: float) -> float | None:
+        if not samples:
+            return None
+        ordered = sorted(samples)
+        if len(ordered) == 1:
+            return round(ordered[0], 4)
+        rank = (len(ordered) - 1) * percentage
+        lower = int(rank)
+        upper = min(lower + 1, len(ordered) - 1)
+        interpolated = ordered[lower] + (ordered[upper] - ordered[lower]) * (rank - lower)
+        return round(interpolated, 4)
+
+    def is_interrupted(row: dict) -> bool:
+        if bool(row.get("interrupted")):
+            return True
+        errors = row.get("errors") or []
+        return any("cancelled (barge-in or stop)" in str(error).lower() for error in errors)
+
+    successful = sum(
+        1 for row in rows if not is_interrupted(row) and not (row.get("errors") or [])
+    )
+    interrupted = sum(1 for row in rows if is_interrupted(row))
+    failed = len(rows) - successful - interrupted
+    ttft = values("llm_time_to_first_token_seconds")
+    total = values("total_turn_seconds")
+    latest = next(
+        (
+            {
+                "provider": str(row.get("llm_provider") or "unknown"),
+                "model": str(row.get("llm_model") or "unknown"),
+            }
+            for row in reversed(rows)
+            if row.get("llm_provider") or row.get("llm_model")
+        ),
+        {"provider": "unknown", "model": "unknown"},
+    )
+    return {
+        "window": f"last_{max_records}_turns",
+        "sample_count": len(rows),
+        "successful_turns": successful,
+        "interrupted_turns": interrupted,
+        "failed_turns": failed,
+        "success_rate_pct": round(successful / len(rows) * 100, 1) if rows else None,
+        "llm_ttft_p50_seconds": percentile(ttft, 0.5),
+        "llm_ttft_p95_seconds": percentile(ttft, 0.95),
+        "total_turn_p50_seconds": percentile(total, 0.5),
+        "total_turn_p95_seconds": percentile(total, 0.95),
+        "latest": latest,
+    }
+
+
+def read_hermes_model_config(path: Path = HERMES_CONFIG_PATH) -> dict[str, str]:
+    """Read only the configured Hermes provider/model names from local config."""
+    try:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, ValueError, yaml.YAMLError):
+        payload = {}
+    model = payload.get("model") if isinstance(payload, dict) else {}
+    if not isinstance(model, dict):
+        model = {}
+    return {
+        "provider": str(model.get("provider") or "unknown"),
+        "model": str(model.get("default") or "unknown"),
+    }
+
+
 ENV_PATHS = [Path.home() / ".hermes" / ".env", ROOT / ".env"]
 SENTENCE_RE = re.compile(r"(.+?[.!?])(?=\s|$)", re.DOTALL)
 THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
@@ -1267,6 +1359,7 @@ async def usage() -> JSONResponse:
             "today": u["today"], "total": u["total"],
             "today_cost": est(u["today"]), "total_cost": est(u["total"]),
         },
+        "performance": read_performance(),
         "elevenlabs": None,
     }
     # ElevenLabs subscription — NEVER blocks the response: serve the cache and
@@ -1612,11 +1705,17 @@ async def config_summary() -> JSONResponse:
     live_cfg = _live_config()
     dash_cfg = ((CFG.get("server") or {}).get("dashboard_proxy")) or {}
 
-    brain = "hermes-agent" if llm_cfg.get("provider", "hermes") == "hermes" \
+    hermes_model = read_hermes_model_config()
+    brain = (
+        f"{hermes_model['provider']} · {hermes_model['model']}"
+        if llm_cfg.get("provider", "hermes") == "hermes"
         else f"{llm_cfg.get('provider')} (fallback)"
+    )
 
     return JSONResponse({
         "brain": brain,
+        "brain_provider": hermes_model["provider"],
+        "brain_model": hermes_model["model"],
         "stt_model": stt_cfg.get("model", "?"),
         "stt_language": stt_cfg.get("language") or "auto",
         "tts_model": voice_cfg.get("model", "?"),
@@ -1841,6 +1940,7 @@ async def _run_turn(ws: WebSocket, pipeline: VoicePipelineServer, conn: ConnStat
             timing.total_done_monotonic = time.perf_counter()
             await ws.send_json({"type": "done", "turn_id": timing.turn_id, "timing": timing.summary()})
     except asyncio.CancelledError:
+        timing.interrupted = True
         timing.errors.append("turn cancelled (barge-in or stop)")
         raise
     except Exception as exc:
@@ -1877,6 +1977,7 @@ async def _run_text_turn(
         await ws.send_json({"type": "done", "turn_id": timing.turn_id,
                             "delegation_id": delegation_id, "timing": timing.summary()})
     except asyncio.CancelledError:
+        timing.interrupted = True
         timing.errors.append("typed turn cancelled (barge-in or stop)")
         raise
     except Exception as exc:

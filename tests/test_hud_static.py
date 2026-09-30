@@ -40,3 +40,11 @@ def test_live_status_panel_present_and_composes_endpoints():
     assert 'data-live="1"' in INDEX_HTML              # live placeholder marker
     # values are escaped before innerHTML
     assert "escHtml(String(r.value" in INDEX_HTML
+
+
+def test_operational_model_and_latency_fields_are_visible():
+    assert 'id="mdBrain"' in INDEX_HTML
+    assert 'id="uLatency"' in INDEX_HTML
+    assert 'id="uSuccess"' in INDEX_HTML
+    assert "total_turn_p50_seconds" in INDEX_HTML
+    assert "success_rate_pct" in INDEX_HTML

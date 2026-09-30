@@ -364,6 +364,12 @@ whenever available.
 
 ### Milestone 8 - reflex and model routing
 
+**Observability first stage complete (2026-09-30).** The HUD now shows the
+configured Hermes provider/model plus privacy-safe recent success and latency
+aggregates. A minimal live turn proved the current DeepSeek route and recorded
+the resolved model, tokens, estimated cost, and wall time. No automatic selector
+or second agent was added. See `JARVIS-OPERATIONAL-TELEMETRY.md`.
+
 Measure latency and cost first. Use deterministic routing for domain/tool/approval
 decisions. Pin cheap models for scheduled summaries and bounded classifications;
 retain the selected main model for complex operator reasoning. Voice endpointing

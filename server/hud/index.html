@@ -381,6 +381,8 @@ footer{
       <div class="kv"><span>Tokens today</span><b id="uTok">—</b></div>
       <div class="kv" id="uCostRow" style="display:none"><span>Est. cost today</span><b id="uCost">—</b></div>
       <div class="kv"><span>Turns today</span><b id="uTurns">—</b></div>
+      <div class="kv"><span>Median response</span><b id="uLatency">—</b></div>
+      <div class="kv"><span>Successful turns</span><b id="uSuccess">—</b></div>
       <div class="kv"><span>Voice usage</span><b id="uTts">—</b></div>
       <div class="bar"><i id="ttsBar"></i></div>
     </div>
@@ -1069,6 +1071,13 @@ async function refreshUsage(){
     const t=j.llm?.today||{};
     $("uTok").textContent=`${fmtK(t.llm_in||0)} in / ${fmtK(t.llm_out||0)} out`;
     $("uTurns").textContent=t.turns||0;
+    const p=j.performance||{};
+    $("uLatency").textContent=p.total_turn_p50_seconds!=null
+      ? p.total_turn_p50_seconds.toFixed(1)+"s p50"
+      : "—";
+    $("uSuccess").textContent=p.success_rate_pct!=null
+      ? `${p.success_rate_pct.toFixed(0)}% (${p.successful_turns||0}/${p.sample_count||0})`
+      : "—";
     if(j.llm?.today_cost!=null){$("uCostRow").style.display="flex";$("uCost").textContent="$"+j.llm.today_cost.toFixed(2)}
     const e=j.elevenlabs;
     if(e&&e.limit){
@@ -1257,6 +1266,11 @@ async function fillLiveStatus(el){
     const t=(u.llm&&u.llm.today)||{};
     rows.push({label:"Tokens today", value:`${fmtK(t.llm_in||0)} in / ${fmtK(t.llm_out||0)} out`});
     rows.push({label:"Turns today", value:t.turns||0});
+    const p=u.performance||{};
+    if(p.total_turn_p50_seconds!=null)
+      rows.push({label:"Median response", value:p.total_turn_p50_seconds.toFixed(1)+"s"});
+    if(p.success_rate_pct!=null)
+      rows.push({label:"Successful turns", value:`${p.success_rate_pct.toFixed(0)}% (${p.successful_turns||0}/${p.sample_count||0})`});
     const e=u.elevenlabs;
     if(e&&e.limit) rows.push({label:"Voice quota", value:`${fmtK(e.used)} / ${fmtK(e.limit)}`});
     el.innerHTML=rows.map(r=>
