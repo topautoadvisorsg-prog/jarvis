@@ -1,6 +1,6 @@
 # `jarvis-main` general operator toolbelt audit
 
-Date: 2026-09-25
+Date: 2026-09-30
 
 ## Architecture source of truth
 
@@ -29,9 +29,12 @@ patch/search, code execution, vision, TTS, skills, memory, session search,
 planning/clarification/delegation, and HUD display tools. A live `web_search`
 smoke test passed.
 
-The new `smartklix-operations` MCP server is enabled globally and exposes one
-tool: `get_smartklix_operations`. Therefore the same default Hermes session used
-by `jarvis-main` can discover it without a new profile or agent.
+The `smartklix-operations` MCP server is enabled globally and exposes five
+tools: read-only operations status, deterministic attention previews, supervised
+research-console status, and bounded start/stop controls for that console. The
+same default Hermes session used by `jarvis-main` discovers them without a new
+profile or manager agent. The controls cannot approve, send, execute CRM work,
+or start the legacy autonomous scheduler.
 
 Some configured toolsets are not currently operational:
 
@@ -41,10 +44,12 @@ Some configured toolsets are not currently operational:
   are enabled. Mouse, keyboard, focus, launch, clipboard, recording, process,
   browser mutation, and file authority remain denied. See
   `JARVIS-COMPUTER-CONTROL.md`.
-- Browser interaction: Hermes selects its Browser Use CLI backend and the CLI
-  resolves, but a live read-only navigation smoke test failed because no
-  supported Chromium-family browser was running. The web search/extract tools
-  do work.
+- Browser interaction: the full browser bundle is configured, but its
+  `agent-browser` runtime is not installed. It was deliberately left that way:
+  the bundle exposes navigation, clicks, typing, keypresses, and JavaScript as
+  one surface, and the current Hermes approval policy does not provide the
+  workflow-specific boundary required before enabling those actions. Web
+  search/extraction and bounded read-only screen inspection do work.
 - Cron: enabled in configuration but absent from the current runtime tool list;
   its gateway requirements are not active in this process.
 - Image generation: enabled in configuration but absent from the current
@@ -57,19 +62,21 @@ Yuanbao, and A2A are disabled and have no current business requirement.
 
 ## Personal email and calendar
 
-Hermes already ships two possible email integrations, but neither is configured:
+Hermes ships two broad email integrations, but neither is configured:
 
 - `google-workspace`: Gmail, Calendar, Drive, Docs, Sheets, and Contacts through
   Google OAuth.
 - `himalaya`: email through IMAP/SMTP, including Gmail App Password support.
 
-No Google OAuth credential files and no relevant email/calendar environment
-configuration were found. The current Google Workspace setup asks for Gmail
-read, send, and modify scopes plus broad Calendar access when those services are
-selected. It should not be connected as-is for an eyes-only phase. The safest
-next email step is a read-only Gmail/Calendar connector or a narrowed version of
-the existing Google skill. Sending and calendar mutations must remain separate,
-approval-gated tools.
+The broad Google Workspace setup asks for Gmail read, send, and modify scopes
+plus broad Calendar access when those services are selected, so it was not used
+for the eyes-only phase. A dedicated `personal-google-readonly` MCP server is now
+installed and verified in the live Hermes runtime. It exposes exactly four
+tools: connection status, Gmail search, one-message read, and primary-calendar
+event listing. It accepts only the exact `gmail.readonly` and
+`calendar.readonly` scope set and keeps its credentials separate. OAuth remains
+pending Buddy setup; until then it reports `setup_required` and has no Google
+data access. See `JARVIS-PERSONAL-GOOGLE-READONLY.md`.
 
 Personal email must never use the SmartKlix outreach rail. Business outreach
 must continue through CRM review, human approval, and deterministic delivery.
@@ -79,7 +86,7 @@ must continue through CRM review, human approval, and deterministic delivery.
 Hermes is currently in manual approval mode, with cron denied. Keep these
 operations read-only without per-call approval: SmartKlix status reads, web
 research, user-requested file reads, screen capture, window/app listing, and
-future Gmail/Calendar reads.
+personal Gmail/Calendar reads.
 
 Require Buddy approval for email/message sending, form submission, purchases or
 spending, important deletion, public publishing, authentication/security
@@ -98,12 +105,11 @@ manual approval boundary until narrower standing rules are explicitly created.
 
 ## Next activation step
 
-Deploy the new read-only CRM route, provision the dedicated shared read token on
-both sides, restart Jarvis/Hermes, and run a live query from `jarvis-main`. This
-is the smallest step that changes the CRM source from `unavailable` to live.
-Production deployment remains a Buddy-approved action.
+Finish the in-progress WhatsApp pairing and prove an allowlisted self-message
+plus `jarvis-main` session continuity. Separately, Buddy can authorize the
+prepared personal Google connector with a Desktop OAuth client when convenient.
+Neither pending action blocks the other.
 
-After live SmartKlix read acceptance, validate the existing dedicated browser
-mode, then connect a read-only personal email/calendar surface. Expand computer
-control only for a named workflow and exact application; do not add global write
-authority during those steps.
+Do not install the broad browser runtime until a named workflow and explicit
+action boundary are implemented. Expand computer control only for an exact
+application and exact actions; do not add global write authority.

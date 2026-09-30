@@ -298,10 +298,15 @@ decision; no event can bypass CRM approval/execution.
 
 ### Milestone 5 - Calendar and personal Gmail
 
-Add separate OAuth clients/scopes and separate read/write tools. Calendar starts
-with free/busy or event-read access. Gmail starts with the least access that
-supports the accepted use case. Sending and event creation remain approval-gated.
-Business outreach email never uses this path.
+**Prepared, pending Buddy OAuth (2026-09-30).** A separate MCP connector now
+exposes only personal Gmail search/read and primary-calendar event reads. It uses
+its own credential directory and requires exactly `gmail.readonly` plus
+`calendar.readonly`; broader or mismatched tokens fail closed. The live server
+can be enabled before authorization and reports setup required without starting
+OAuth. See `JARVIS-PERSONAL-GOOGLE-READONLY.md`.
+
+Sending, labeling, deletion, event creation/modification, Drive, Contacts,
+Sheets, and Docs remain absent. Business outreach email never uses this path.
 
 ### Milestone 6 - owner phone escalation and background continuation
 
