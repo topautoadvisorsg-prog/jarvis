@@ -66,8 +66,13 @@ failed files, zero unsupported files, and zero skipped files. Local storage was
 8.7 MiB after indexing.
 
 The initial semantic build reported 102,420 model tokens plus 8,213 tokens for
-the resource-reason session commit. Provider billing was not queried, so a cash
-cost is deliberately not claimed.
+the resource-reason session commit. A corrective metadata update exposed a
+list-shaped namespace response that the first no-op guard did not recognize;
+that update reported another 5,644 build tokens and 20,441 resource-session
+tokens. The guard now covers both OpenViking response shapes and a verified
+unchanged run skips ingestion. Total model usage reported during setup was
+136,718 tokens. Provider billing was not queried, so a cash cost is deliberately
+not claimed.
 
 ## Verification results
 
