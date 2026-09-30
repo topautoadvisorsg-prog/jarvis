@@ -12,6 +12,10 @@ not block local Jarvis engineering.
   the voice shutoff or sleep command, STOP during a response, barge-in while
   Jarvis is speaking, and the return to standby. Record any missed activation,
   failure to stop listening, echo, duplicate playback, or delayed interruption.
+- [ ] **Run one full Windows reboot acceptance after the room voice test.** Use
+  the desktop `JARVIS HUD` shortcut after sign-in and confirm the supervised HUD,
+  Hermes API, dashboard, and second brain return without terminal repair. The
+  equivalent complete WSL shutdown/recovery test already passes.
 - [ ] **Finish WhatsApp QR pairing.** Resume the existing pairing wizard, scan
   the QR code with the intended account, and confirm the allowlisted owner
   number. Keep groups and customer messaging disabled during acceptance.
