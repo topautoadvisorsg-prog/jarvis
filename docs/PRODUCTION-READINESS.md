@@ -91,8 +91,11 @@ Chromium acceptance now covers STOP during thinking/tool/speech, duplicate
 playback prevention, late audio rejection, reconnect recovery, and stale-socket
 isolation. See `JARVIS-BROWSER-RELIABILITY.md`.
 
-1. Tag the approved checkpoint and keep a rollback package containing source,
-   sanitized config templates, asset hashes, and restore instructions.
+1. **Rollback package complete (2026-09-30).** The approved checkpoint can now
+   be built from a clean Git tree into a deterministic verified ZIP containing
+   committed source, sanitized configuration, per-file and avatar-asset hashes,
+   and exact restore instructions. Live secrets and runtime data fail closed or
+   remain excluded. See `JARVIS-ROLLBACK-PACKAGE.md`.
 2. Run the full acceptance matrix after a cold Windows/WSL restart: launch,
    text, microphone, transcription, tools, approvals, STOP, barge-in, voice,
    memory, dashboards, and Hermes Desktop coexistence.
