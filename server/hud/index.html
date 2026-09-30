@@ -460,7 +460,7 @@ footer{
 "use strict";
 /* ============================== state ============================== */
 const CONV = "jarvis-main";
-let ws=null, wsReady=false, capturing=false, state="standby";
+let ws=null, wsReady=false, wsEpoch=0, wsReconnectTimer=null, capturing=false, state="standby";
 let audioCtx=null, workletNode=null, mediaStream=null, srcNode=null;
 let level=0, turns=0;
 const PCM_SAMPLE_RATE=16000;
@@ -664,11 +664,23 @@ function showApproval(e){
 /* ============================== websocket ========================== */
 function wsUrl(){return (location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws"}
 function connect(){
-  ws=new WebSocket(wsUrl()); ws.binaryType="arraybuffer";
-  ws.onopen=()=>{wsReady=true;$("wsDot").className="dot on";$("wsState").textContent="online";$("connState").textContent="LINK ACTIVE";$("footMsg").textContent="VOICE SERVER CONNECTED"};
-  ws.onclose=()=>{wsReady=false;$("wsDot").className="dot off";$("wsState").textContent="offline";$("connState").textContent="LINK DOWN";setState("standby","STANDBY");setTimeout(connect,3000)};
-  ws.onerror=()=>{};
-  ws.onmessage=ev=>{
+  if(wsReconnectTimer){clearTimeout(wsReconnectTimer);wsReconnectTimer=null}
+  const socket=new WebSocket(wsUrl()), epoch=++wsEpoch;
+  ws=socket; socket.binaryType="arraybuffer";
+  socket.onopen=()=>{
+    if(socket!==ws||epoch!==wsEpoch)return;
+    wsReady=true;$("wsDot").className="dot on";$("wsState").textContent="online";$("connState").textContent="LINK ACTIVE";$("footMsg").textContent="VOICE SERVER CONNECTED";
+  };
+  socket.onclose=()=>{
+    if(socket!==ws||epoch!==wsEpoch)return;
+    wsReady=false;currentRun=null;capturing=false;stopPlayback();showStop(false);
+    $("talkBtn").textContent="ENGAGE VOICE";$("micState").textContent=mediaStream?"ready":"idle";$("levelBar").style.width="0%";
+    $("wsDot").className="dot off";$("wsState").textContent="offline";$("connState").textContent="LINK DOWN";setState("standby","STANDBY");
+    wsReconnectTimer=setTimeout(()=>{if(epoch===wsEpoch)connect()},3000);
+  };
+  socket.onerror=()=>{};
+  socket.onmessage=ev=>{
+    if(socket!==ws||epoch!==wsEpoch)return;
     if(ev.data instanceof ArrayBuffer){receiveAudioChunk(ev.data);return}
     let e; try{e=JSON.parse(ev.data)}catch{return}
     if(e.type==="summon_panel"){ summonPanel(e); }
