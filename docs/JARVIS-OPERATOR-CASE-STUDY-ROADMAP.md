@@ -399,8 +399,8 @@ work remain later features after the operator loop is reliable and measurable.
 
 ## Current activation package
 
-The remaining Milestone 0 deliverable is a live, read-only operations acceptance
-report covering:
+Milestone 0 live read-only operations acceptance passed on September 30, 2026.
+The report covers:
 
 - CRM authentication with the already-deployed route;
 - local outreach endpoint health;
@@ -412,12 +412,11 @@ report covering:
 - regression tests for the HUD, voice, STOP, approvals, and SmartKlix snapshot.
 
 The local second-brain evaluation, alert preview, bounded research-console
-control, read-only computer vision, and personal Google connector preparation
-are already complete. None of them replaces the remaining live CRM acceptance.
-WhatsApp pairing and personal Google OAuth are independent pending activation
-steps owned by Buddy's accounts. These and the SmartKlix Vercel authorization
-are tracked in `BUDDY-ACTION-CHECKLIST.md` so engineering can continue without
-losing the account-dependent work.
+control, read-only computer vision, SmartKlix Vercel authorization and live
+`jarvis-main` SmartKlix report are complete. See
+`SMARTKLIX-LIVE-ACCEPTANCE-20260930.md`. WhatsApp pairing and personal Google
+OAuth remain independent pending activation steps owned by Buddy's accounts and
+tracked in `BUDDY-ACTION-CHECKLIST.md`.
 
 ## Risks to carry forward
 
