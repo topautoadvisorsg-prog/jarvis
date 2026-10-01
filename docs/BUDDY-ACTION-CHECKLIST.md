@@ -22,10 +22,10 @@ not block local Jarvis engineering.
 - [ ] **Authorize personal Google read-only access.** Complete OAuth with only
   `gmail.readonly` and `calendar.readonly`, then run the acceptance checks in
   `JARVIS-PERSONAL-GOOGLE-READONLY.md`.
-- [ ] **Authorize the SmartKlix Vercel project.** Use an account with access to
-  the linked project, configure the production read token to match the protected
-  local value, redeploy, and run the safe CRM activation preflight. Do not paste
-  the token into chat, source control, or browser-visible configuration.
+- [x] **Authorize the SmartKlix Vercel project.** Completed September 30, 2026.
+  The protected production token was saved, the CRM redeployed, unauthenticated
+  access returned HTTP 401, authenticated access returned HTTP 200, and the
+  temporary local token file/page were removed.
 
 ## Deferred decisions
 

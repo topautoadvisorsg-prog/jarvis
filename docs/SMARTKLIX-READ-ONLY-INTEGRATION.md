@@ -23,19 +23,22 @@ except loopback HTTP for the local Claude Agents service.
 
 ## Current activation state
 
-The production route is deployed and returns `503 JARVIS_READ_NOT_CONFIGURED`
-without exposing data. A 64-character token has been generated in the protected
-local Hermes environment; its value is not stored in Git or printed by the
-preflight. The remaining action is to set that same value as
-`JARVIS_SMARTKLIX_READ_TOKEN` in the linked Vercel project and redeploy/restart
-the production function. The saved Vercel CLI identity on this computer is not
-currently authorized for that team project.
+Activation passed on September 30, 2026. The production CRM route rejects an
+unauthenticated request with HTTP 401 and returns HTTP 200 with the protected
+read token. The supervised Windows Claude Agents console and the Vercel CRM both
+return `available` through the live `jarvis-main` MCP tool. Sending, execution,
+approval and spending remain disabled.
+
+Hermes runs in WSL while the approved Claude Agents console binds only to Windows
+loopback. The MCP adapter therefore uses a Windows PowerShell bridge for those
+GET-only loopback reads. The URL is still restricted to loopback HTTP; no LAN or
+public listener is opened. The MCP server loads only allowlisted SmartKlix
+settings from the protected Hermes dotenv, so unrelated provider credentials do
+not enter that subprocess. See `SMARTKLIX-LIVE-ACCEPTANCE-20260930.md`.
 
 ## Activation
 
-1. Confirm the deployed CRM route with the safe preflight below. The current
-   production route is live and returns `JARVIS_READ_NOT_CONFIGURED`, proving
-   deployment while refusing access until its secret exists.
+1. Confirm the deployed CRM route with the safe preflight below.
 2. Generate one random token of at least 32 characters.
 3. Set `JARVIS_SMARTKLIX_READ_TOKEN` in the CRM deployment.
 4. Set `SMARTKLIX_JARVIS_READ_TOKEN` in the private Hermes environment.
@@ -56,7 +59,6 @@ write authority, or the snapshot is unavailable. Exit code `0` means the CRM
 connection is authenticated and read-only; exit code `2` means activation is
 still pending.
 
-Until the shared read token is configured, the tool returns that source as
-unavailable rather than guessing or fabricating business data. The local
-outreach source likewise reports unavailable when its approved local research
-server is stopped.
+If the shared read token is missing, the tool returns that source as unavailable
+rather than guessing or fabricating business data. The local outreach source
+likewise reports unavailable when its approved local research server is stopped.
