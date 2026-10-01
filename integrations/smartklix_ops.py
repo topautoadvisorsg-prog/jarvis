@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -38,6 +40,75 @@ def _fetch_json(url: str, headers: Mapping[str, str], timeout: float) -> Any:
     request = Request(url, method="GET", headers={"Accept": "application/json", **dict(headers)})
     with urlopen(request, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def _windows_loopback_bridge_available() -> bool:
+    """Return whether this process can safely ask Windows for loopback data."""
+    if os.name == "nt" or not shutil.which("powershell.exe"):
+        return False
+    try:
+        release = Path("/proc/sys/kernel/osrelease").read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return "microsoft" in release.casefold()
+
+
+def _fetch_windows_loopback_json(
+    url: str, headers: Mapping[str, str], timeout: float
+) -> Any:
+    """Read a Windows-only loopback endpoint from a WSL-hosted MCP server.
+
+    The supervised Claude Agents console deliberately binds to Windows
+    127.0.0.1. On WSL installations without mirrored networking, Linux
+    127.0.0.1 is a different interface. This bridge keeps the service private
+    instead of opening it on the LAN.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme != "http" or parsed.hostname not in LOOPBACK_HOSTS:
+        raise ValueError("Windows bridge accepts loopback HTTP only")
+    if not _windows_loopback_bridge_available():
+        raise OSError("Windows loopback bridge is unavailable")
+
+    request_payload = json.dumps(
+        {"url": url, "headers": dict(headers), "timeout": max(1, int(timeout))}
+    )
+    script = (
+        "$utf8=New-Object System.Text.UTF8Encoding($false);"
+        "[Console]::OutputEncoding=$utf8;$OutputEncoding=$utf8;"
+        "$ErrorActionPreference='Stop';"
+        "$request=[Console]::In.ReadToEnd()|ConvertFrom-Json;"
+        "$headers=@{};"
+        "if($request.headers){"
+        "$request.headers.PSObject.Properties|ForEach-Object{$headers[$_.Name]=[string]$_.Value}"
+        "};"
+        "$result=Invoke-RestMethod -Uri ([string]$request.url) -Method Get "
+        "-Headers $headers -TimeoutSec ([int]$request.timeout);"
+        "$result|ConvertTo-Json -Depth 64 -Compress"
+    )
+    try:
+        result = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                script,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            input=request_payload,
+            timeout=timeout + 5,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise OSError(f"Windows loopback request failed: {error}") from error
+    if result.returncode != 0:
+        detail = (result.stderr or "Windows loopback request failed").strip()[-240:]
+        raise OSError(detail)
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise OSError("Windows loopback response was not valid JSON") from error
 
 
 def _source_error(error: Exception) -> str:
@@ -131,6 +202,7 @@ def build_operations_snapshot(
     *,
     environ: Mapping[str, str] | None = None,
     fetch_json: JsonFetcher = _fetch_json,
+    local_fetch_json: JsonFetcher | None = None,
     now: datetime | None = None,
     usage_path: Path | None = None,
 ) -> dict[str, Any]:
@@ -189,11 +261,18 @@ def build_operations_snapshot(
             "research": "/api/cold-research",
             "territoryWork": "/api/territory/work",
         }
+        outreach_fetch = local_fetch_json or fetch_json
+        if (
+            local_fetch_json is None
+            and fetch_json is _fetch_json
+            and _windows_loopback_bridge_available()
+        ):
+            outreach_fetch = _fetch_windows_loopback_json
         collected: dict[str, Any] = {}
         failures: dict[str, str] = {}
         with ThreadPoolExecutor(max_workers=4, thread_name_prefix="smartklix-read") as pool:
             requests = {
-                pool.submit(fetch_json, f"{outreach_base}{path}", headers, timeout): name
+                pool.submit(outreach_fetch, f"{outreach_base}{path}", headers, timeout): name
                 for name, path in paths.items()
             }
             for future in as_completed(requests):

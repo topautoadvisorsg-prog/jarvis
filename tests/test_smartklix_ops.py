@@ -3,7 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from integrations.smartklix_ops import _validate_base_url, build_operations_snapshot
+from integrations.smartklix_ops import (
+    _fetch_windows_loopback_json,
+    _validate_base_url,
+    build_operations_snapshot,
+)
 
 
 NOW = datetime(2026, 9, 25, 16, 0, tzinfo=timezone.utc)
@@ -70,6 +74,38 @@ def test_collects_only_get_snapshots_and_forwards_bounded_lead_query(tmp_path: P
     assert "lead=Acme+Roofing" in crm_url
     assert crm_headers == {"x-jarvis-read-token": TOKEN}
     assert len(calls) == 9
+
+
+def test_can_use_separate_private_windows_loopback_fetcher(tmp_path: Path):
+    remote_calls = []
+    local_calls = []
+
+    def remote_fetch(url, headers, timeout):
+        remote_calls.append(url)
+        return {"authority": {"readOnly": True}}
+
+    def local_fetch(url, headers, timeout):
+        local_calls.append(url)
+        return {"ok": True}
+
+    snapshot = build_operations_snapshot(
+        environ={"SMARTKLIX_JARVIS_READ_TOKEN": TOKEN},
+        fetch_json=remote_fetch,
+        local_fetch_json=local_fetch,
+        now=NOW,
+        usage_path=tmp_path / "none.json",
+    )
+
+    assert snapshot["sources"]["crm"]["status"] == "available"
+    assert snapshot["sources"]["outreach"]["status"] == "available"
+    assert len(remote_calls) == 1
+    assert len(local_calls) == 8
+    assert all(url.startswith("http://127.0.0.1:3001/") for url in local_calls)
+
+
+def test_windows_bridge_rejects_non_loopback_before_launching():
+    with pytest.raises(ValueError, match="loopback HTTP only"):
+        _fetch_windows_loopback_json("https://smartklix.example/api", {}, 1)
 
 
 def test_compacts_research_and_territory_payloads(tmp_path: Path):
