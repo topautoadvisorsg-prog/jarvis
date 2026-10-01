@@ -28,7 +28,10 @@ mcp = MCPServer(
         "CRM and Claude Agents plus bounded lifecycle control of the approved local "
         "research console. Attention previews never deliver notifications. Lifecycle "
         "control cannot create objectives, approve, execute, send, spend, or mutate "
-        "CRM data."
+        "CRM data. When operatingMode.name is supervised_research, zero legacy workers "
+        "and legacy worker health offline are expected. Treat retained legacy activity "
+        "and execution failures as audit history unless a current supervised action "
+        "explicitly owns them."
     ),
 )
 

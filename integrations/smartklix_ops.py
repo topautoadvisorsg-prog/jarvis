@@ -319,6 +319,26 @@ def build_operations_snapshot(
                     collected[name] = _compact_outreach_source(name, future.result())
                 except Exception as error:
                     failures[name] = _source_error(error)
+        metrics = collected.get("metrics")
+        if isinstance(metrics, dict) and metrics.get("researchOnly") is True:
+            collected["operatingMode"] = {
+                "name": "supervised_research",
+                "researchOnly": True,
+                "legacyWorkersExpected": False,
+                "sendingEnabled": False,
+                "executionEnabled": False,
+                "interpretation": (
+                    "The supervised console intentionally runs without the legacy "
+                    "autonomous worker fleet. Zero workers or legacy worker health "
+                    "offline is expected in this mode. Activity and execution failures "
+                    "from the dormant pipeline are preserved audit history unless a "
+                    "current supervised action explicitly owns them."
+                ),
+            }
+            workers = collected.get("workers")
+            if isinstance(workers, dict) and int(workers.get("count", 0) or 0) == 0:
+                workers["operationalStatus"] = "expected_idle"
+                workers["expectedInSupervisedResearch"] = True
         outreach = {
             "status": "available" if collected else "unavailable",
             "data": collected,

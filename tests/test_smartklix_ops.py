@@ -146,6 +146,10 @@ def test_compacts_research_and_territory_payloads(tmp_path: Path):
                 "outreachStatus": "not_started", "businesses": {"huge": {"secret": "omit"}},
                 "metrics": {"researched": 4}, "updatedAt": "2026-09-25T15:00:00Z",
             }]}
+        if url.endswith("/api/metrics"):
+            return {"researchOnly": True, "health": "offline"}
+        if url.endswith("/api/workers"):
+            return {"workers": [], "count": 0, "healthy": False}
         return {"ok": True}
 
     snapshot = build_operations_snapshot(
@@ -157,6 +161,9 @@ def test_compacts_research_and_territory_payloads(tmp_path: Path):
     assert "package" not in outreach["research"]["recent"][0]
     assert outreach["territoryWork"]["work"][0]["metrics"] == {"researched": 4}
     assert "businesses" not in outreach["territoryWork"]["work"][0]
+    assert outreach["operatingMode"]["name"] == "supervised_research"
+    assert outreach["workers"]["operationalStatus"] == "expected_idle"
+    assert outreach["workers"]["expectedInSupervisedResearch"] is True
 
 
 @pytest.mark.parametrize("hours", [0, 169])
