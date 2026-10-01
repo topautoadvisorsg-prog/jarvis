@@ -2,6 +2,9 @@
 
 Status: **PASS — CRM AND SUPERVISED CLAUDE AGENTS VISIBLE TO `jarvis-main`.**
 
+Durable cross-system restore markers and the final Buddy/engineering handoff are
+recorded in `JARVIS-SMARTKLIX-CHECKPOINT-20260930.md`.
+
 ## Accepted architecture
 
 ```text
