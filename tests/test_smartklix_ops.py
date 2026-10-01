@@ -7,6 +7,7 @@ from integrations.smartklix_ops import (
     _fetch_windows_loopback_json,
     _validate_base_url,
     build_operations_snapshot,
+    load_smartklix_environment,
 )
 
 
@@ -106,6 +107,27 @@ def test_can_use_separate_private_windows_loopback_fetcher(tmp_path: Path):
 def test_windows_bridge_rejects_non_loopback_before_launching():
     with pytest.raises(ValueError, match="loopback HTTP only"):
         _fetch_windows_loopback_json("https://smartklix.example/api", {}, 1)
+
+
+def test_runtime_environment_loads_only_allowlisted_missing_values(tmp_path: Path):
+    dotenv = tmp_path / ".env"
+    dotenv.write_text(
+        "SMARTKLIX_JARVIS_READ_TOKEN=from-file\n"
+        "SMARTKLIX_AGENTS_ROOT='/approved/agents'\n"
+        "OPENAI_API_KEY=must-not-load\n"
+        "SMARTKLIX_CRM_BASE_URL=https://wrong.example\n",
+        encoding="utf-8",
+    )
+
+    result = load_smartklix_environment(
+        dotenv,
+        base={"SMARTKLIX_CRM_BASE_URL": "https://configured.example"},
+    )
+
+    assert result["SMARTKLIX_JARVIS_READ_TOKEN"] == "from-file"
+    assert result["SMARTKLIX_AGENTS_ROOT"] == "/approved/agents"
+    assert result["SMARTKLIX_CRM_BASE_URL"] == "https://configured.example"
+    assert "OPENAI_API_KEY" not in result
 
 
 def test_compacts_research_and_territory_payloads(tmp_path: Path):
