@@ -23,6 +23,44 @@ JsonFetcher = Callable[[str, Mapping[str, str], float], Any]
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 DEFAULT_CRM_BASE_URL = "https://smartklixcrm.vercel.app"
 DEFAULT_OUTREACH_BASE_URL = "http://127.0.0.1:3001"
+SMARTKLIX_RUNTIME_ENV_KEYS = {
+    "SMARTKLIX_AGENTS_ROOT",
+    "SMARTKLIX_ALERT_STATE_PATH",
+    "SMARTKLIX_ALERT_TIMEZONE",
+    "SMARTKLIX_CONTROL_STATE_DIR",
+    "SMARTKLIX_CRM_BASE_URL",
+    "SMARTKLIX_JARVIS_CONTROL_ENABLED",
+    "SMARTKLIX_JARVIS_CONTROL_TOKEN",
+    "SMARTKLIX_JARVIS_READ_TOKEN",
+    "SMARTKLIX_OUTREACH_ADMIN_TOKEN",
+    "SMARTKLIX_OUTREACH_BASE_URL",
+    "SMARTKLIX_READ_TIMEOUT_SECONDS",
+}
+
+
+def load_smartklix_environment(
+    path: Path,
+    base: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Load only SmartKlix MCP settings from the protected Hermes dotenv."""
+    result = dict(os.environ if base is None else base)
+    try:
+        lines = path.expanduser().read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return result
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key not in SMARTKLIX_RUNTIME_ENV_KEYS or key in result:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        result[key] = value
+    return result
 
 
 def _validate_base_url(value: str, label: str) -> str:

@@ -10,7 +10,15 @@ from mcp.server import MCPServer
 
 from smartklix_alerts import AlertLedger, build_attention_events
 from smartklix_control import ControlError, SmartKlixResearchControl
-from smartklix_ops import build_operations_snapshot
+from smartklix_ops import build_operations_snapshot, load_smartklix_environment
+
+
+# Hermes deliberately starts MCP subprocesses with a narrow environment. Load
+# only this server's allowlisted settings from the protected per-user dotenv;
+# provider credentials and unrelated secrets never enter the MCP process.
+os.environ.update(
+    load_smartklix_environment(Path.home() / ".hermes" / ".env", base=os.environ)
+)
 
 
 mcp = MCPServer(
